@@ -3,12 +3,14 @@ import { inject } from '@angular/core';
 import { from, switchMap, throwError, catchError } from 'rxjs';
 import { AuthService } from './auth.service';
 
-const SKIP = ['/api/auth/refresh', '/api/auth/login', '/api/auth/register'];
+const SKIP = ['/auth/refresh', '/auth/login', '/auth/register'];
 
 /** Attaches the access token and transparently refreshes it once on 401, then retries. */
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const auth = inject(AuthService);
-  if (!req.url.startsWith('/api') || SKIP.some((p) => req.url.startsWith(p))) return next(req);
+  const isApi = req.url.includes('/api/') || req.url.endsWith('/api') || req.url.startsWith('/api');
+  const isSkip = SKIP.some((p) => req.url.includes(p));
+  if (!isApi || isSkip) return next(req);
 
   const withToken = (t: string | null) => (t ? req.clone({ setHeaders: { Authorization: `Bearer ${t}` } }) : req);
 

@@ -65,8 +65,10 @@ export class AuthDrawerComponent {
   protected canSignup = computed(
     () =>
       this.nameValid() &&
-      this.userAvail().state === 'ok' &&
-      this.emailAvail().state === 'ok' &&
+      this.userAvail().state !== 'taken' &&
+      this.userAvail().state !== 'invalid' &&
+      this.emailAvail().state !== 'taken' &&
+      this.emailAvail().state !== 'invalid' &&
       this.pwValid() &&
       this.pwMatch() &&
       this.terms() &&
@@ -148,6 +150,24 @@ export class AuthDrawerComponent {
 
   protected async signup() {
     this.touched.set({ name: true, user: true, email: true, pw: true, pw2: true, terms: true });
+    if (!this.nameValid()) {
+      this.error.set('Please enter your full name (at least 2 letters)');
+      return;
+    }
+    const u = this.username().trim().toLowerCase();
+    if (!u || !/^[a-z0-9_]{3,20}$/.test(u)) {
+      this.error.set('Username must be 3–20 letters, numbers or underscores');
+      return;
+    }
+    const em = this.email().trim().toLowerCase();
+    if (!em || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(em)) {
+      this.error.set('Please enter a valid email address');
+      return;
+    }
+    if (!this.pwValid()) {
+      this.error.set('Password must be at least 8 characters with letters and numbers');
+      return;
+    }
     if (!this.password2()) {
       this.error.set('Please confirm your password');
       return;
@@ -156,12 +176,27 @@ export class AuthDrawerComponent {
       this.error.set('Passwords do not match');
       return;
     }
-    if (!this.canSignup()) return;
+    if (!this.terms()) {
+      this.error.set('Please accept the Terms & Conditions and Privacy Policy');
+      return;
+    }
+    if (this.userAvail().state === 'taken') {
+      this.error.set(this.userAvail().msg || 'Username is taken');
+      return;
+    }
+    if (this.emailAvail().state === 'taken') {
+      this.error.set(this.emailAvail().msg || 'An account with this email exists');
+      return;
+    }
+    if (this.refAvail().state === 'invalid') {
+      this.error.set(this.refAvail().msg || 'Invalid referrer username');
+      return;
+    }
     await this.run(async () => {
       await this.auth.register({
         fullName: this.fullName().trim(),
-        username: this.username().trim().toLowerCase(),
-        email: this.email().trim().toLowerCase(),
+        username: u,
+        email: em,
         password: this.password(),
         referrer: this.referrer().trim().toLowerCase() || undefined,
         acceptTerms: true,

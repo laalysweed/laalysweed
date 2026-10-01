@@ -68,10 +68,13 @@ if (!parsed.success) {
 const raw = parsed.data;
 const appOrigin = raw.APP_URL.replace(/\/$/, '');
 const twin = appOrigin.includes('://www.') ? appOrigin.replace('://www.', '://') : appOrigin.replace('://', '://www.');
+const isProdEnv = raw.NODE_ENV === 'production' || !!process.env['RENDER'];
 export const env = {
   ...raw,
   CORS_ORIGINS: raw.CORS_ORIGINS ?? (appOrigin.startsWith('http://localhost') ? appOrigin : `${appOrigin},${twin}`),
-  COOKIE_SECURE: raw.COOKIE_SECURE ? raw.COOKIE_SECURE === 'true' : appOrigin.startsWith('https://'),
+  COOKIE_SECURE: raw.COOKIE_SECURE !== undefined && raw.COOKIE_SECURE !== ''
+    ? raw.COOKIE_SECURE === 'true'
+    : (isProdEnv || appOrigin.startsWith('https://')),
 };
 export const isProd = env.NODE_ENV === 'production';
 export const isTest = env.NODE_ENV === 'test';

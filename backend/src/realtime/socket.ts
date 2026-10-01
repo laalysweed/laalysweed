@@ -8,9 +8,12 @@ import { sentimentPct } from '../trading/trade.service';
 
 const MAX_SYMBOL_ROOMS = 8;
 
-export function initSockets(http: HttpServer, corsOrigins: string[]) {
+export function initSockets(http: HttpServer, _corsOrigins: string[]) {
   const io = new Server(http, {
-    cors: { origin: corsOrigins, credentials: true },
+    cors: {
+      origin: (origin, callback) => callback(null, true),
+      credentials: true,
+    },
     pingInterval: 20_000,
     pingTimeout: 20_000,
   });

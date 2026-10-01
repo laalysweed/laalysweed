@@ -36,10 +36,15 @@ export class SocketService {
       return;
     }
     this.socket?.disconnect();
-    const apiUrl =
+    const customUrl =
       typeof window !== 'undefined' && (window as unknown as { __API_URL__?: string }).__API_URL__
         ? (window as unknown as { __API_URL__: string }).__API_URL__.replace(/\/+$/, '')
         : undefined;
+    const apiUrl =
+      customUrl ||
+      (typeof window !== 'undefined' && !/^(localhost|127\.|192\.168\.)/.test(window.location.hostname)
+        ? 'https://laalysweed.onrender.com'
+        : undefined);
     const s = io(apiUrl || undefined, {
       path: '/socket.io',
       transports: ['websocket', 'polling'],

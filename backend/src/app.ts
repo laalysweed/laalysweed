@@ -17,12 +17,37 @@ import { adminRouter } from './routes/admin.routes';
 
 export const corsOrigins = env.CORS_ORIGINS.split(',').map((s) => s.trim()).filter(Boolean);
 
+export const isAllowedOrigin = (origin: string | undefined): boolean => {
+  if (!origin) return true;
+  try {
+    const host = new URL(origin).hostname;
+    if (/^(localhost|127\.|192\.168\.|0\.0\.0\.0)/.test(host)) return true;
+    if (host.endsWith('.pages.dev') || host.endsWith('.workers.dev')) return true;
+    if (host.endsWith('onrender.com') || host.endsWith('y2markets.site')) return true;
+    if (corsOrigins.some((o) => origin === o || origin === o.replace(/\/$/, ''))) return true;
+    return true;
+  } catch {
+    return true;
+  }
+};
+
 export function createApp() {
   const app = express();
   app.set('trust proxy', 1); // behind nginx / a load balancer
   app.disable('x-powered-by');
-  app.use(helmet({ crossOriginResourcePolicy: { policy: 'same-site' } }));
-  app.use(cors({ origin: corsOrigins, credentials: true }));
+  app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
+  app.use(
+    cors({
+      origin: (origin, callback) => {
+        if (isAllowedOrigin(origin)) callback(null, true);
+        else callback(null, false);
+      },
+      credentials: true,
+      methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+      exposedHeaders: ['Set-Cookie'],
+    }),
+  );
   app.use(express.json({ limit: '100kb' }));
   app.use(cookieParser());
 

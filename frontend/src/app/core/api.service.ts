@@ -9,10 +9,16 @@ type Params = Record<string, string | number | boolean | undefined | null>;
 @Injectable({ providedIn: 'root' })
 export class ApiService {
   private http = inject(HttpClient);
-  readonly base =
-    typeof window !== 'undefined' && (window as unknown as { __API_URL__?: string }).__API_URL__
-      ? `${(window as unknown as { __API_URL__: string }).__API_URL__.replace(/\/+$/, '')}/api`
-      : '/api';
+  readonly base = (() => {
+    if (typeof window !== 'undefined') {
+      const custom = (window as unknown as { __API_URL__?: string }).__API_URL__;
+      if (custom) return `${custom.replace(/\/+$/, '')}/api`;
+      if (!/^(localhost|127\.|192\.168\.)/.test(window.location.hostname)) {
+        return 'https://laalysweed.onrender.com/api';
+      }
+    }
+    return '/api';
+  })();
 
   get<T>(path: string, params?: Params) {
     return this.run(this.http.get<T>(this.base + path, { params: this.params(params), withCredentials: true }));
