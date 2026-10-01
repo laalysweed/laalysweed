@@ -9,6 +9,7 @@ import { AuthService } from '../../core/auth.service';
 import { SoundService } from '../../core/ui.service';
 import { LogoComponent } from '../../shared/logo.component';
 import { IconComponent } from '../../shared/icon.component';
+import { StackTableDirective } from '../../shared/stack-table.directive';
 import { AuditChartComponent } from './audit-chart.component';
 import { Account, ApiError, ChatMsg, Deposit, Trade, Tournament, User, Withdrawal, WithdrawalPopupConfig } from '../../core/models';
 import { METHOD_LABELS, STATUS_LABELS, dateTime, money, price, signedMoney, statusTone } from '../../core/format';
@@ -91,7 +92,7 @@ interface Conversation {
 @Component({
   selector: 'app-admin',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, RouterLink, LogoComponent, IconComponent, AuditChartComponent],
+  imports: [FormsModule, RouterLink, LogoComponent, IconComponent, AuditChartComponent, StackTableDirective],
   templateUrl: './admin.component.html',
   styleUrl: './admin.component.scss',
 })

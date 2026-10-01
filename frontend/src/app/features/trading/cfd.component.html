@@ -102,8 +102,8 @@
       <button class="q sell" [class.on]="side() === 'sell'" (click)="side.set('sell')"><span>SELL</span><b class="num">{{ price(bid(), prec()) }}</b></button>
     </div>
     <div class="otype">
-      <button [class.on]="orderType() === 'market'" (click)="orderType.set('market')">Market<br />Order</button>
-      <button [class.on]="orderType() === 'limit'" (click)="orderType.set('limit'); limitPrice.set(mid())">By Price<br />Order</button>
+      <button [class.on]="orderType() === 'market'" (click)="orderType.set('market')">Market <br />Order</button>
+      <button [class.on]="orderType() === 'limit'" (click)="orderType.set('limit'); limitPrice.set(mid())">By Price <br />Order</button>
     </div>
     @if (orderType() === 'limit') {
       <label class="lbl">Open at price</label>
@@ -155,19 +155,19 @@
           @case ('positions') {
             @if (positions().length) {
               <div class="table-wrap">
-                <table class="table">
+                <table class="table stack">
                   <thead><tr><th>Asset</th><th>Side</th><th>Lots</th><th>Open</th><th>Current</th><th>SL / TP</th><th>Margin</th><th>P/L</th><th></th></tr></thead>
                   <tbody>
                     @for (p of positions(); track p.id) {
                       <tr>
-                        <td>{{ p.symbol }}</td>
-                        <td><span class="badge" [class.green]="p.side === 'buy'" [class.red]="p.side === 'sell'">{{ p.side }}</span></td>
-                        <td class="num">{{ p.lots }}</td>
-                        <td class="num">{{ price(p.openPrice, prec()) }}</td>
-                        <td class="num">{{ price(market.price(p.symbol)(), prec()) }}</td>
-                        <td class="num muted">{{ p.sl ?? '—' }} / {{ p.tp ?? '—' }}</td>
-                        <td class="num">{{ money(p.margin) }}</td>
-                        <td class="num" [class.up-text]="(livePnl().get(p.id) ?? 0) > 0" [class.down-text]="(livePnl().get(p.id) ?? 0) < 0"><b>{{ signed(livePnl().get(p.id) ?? 0) }}</b></td>
+                        <td data-label="Asset">{{ p.symbol }}</td>
+                        <td data-label="Side"><span class="badge" [class.green]="p.side === 'buy'" [class.red]="p.side === 'sell'">{{ p.side }}</span></td>
+                        <td data-label="Lots" class="num">{{ p.lots }}</td>
+                        <td data-label="Open" class="num">{{ price(p.openPrice, prec()) }}</td>
+                        <td data-label="Current" class="num">{{ price(market.price(p.symbol)(), prec()) }}</td>
+                        <td data-label="SL / TP" class="num muted">{{ p.sl ?? '—' }} / {{ p.tp ?? '—' }}</td>
+                        <td data-label="Margin" class="num">{{ money(p.margin) }}</td>
+                        <td data-label="P/L" class="num" [class.up-text]="(livePnl().get(p.id) ?? 0) > 0" [class.down-text]="(livePnl().get(p.id) ?? 0) < 0"><b>{{ signed(livePnl().get(p.id) ?? 0) }}</b></td>
                         <td><button class="btn btn-soft sm" (click)="close(p)">Close</button></td>
                       </tr>
                     }
@@ -181,7 +181,7 @@
           @case ('orders') {
             @if (orders().length) {
               <div class="table-wrap">
-                <table class="table">
+                <table class="table stack">
                   <thead><tr><th>Asset</th><th>Side</th><th>Lots</th><th>Limit price</th><th>Placed</th><th></th></tr></thead>
                   <tbody>
                     @for (o of orders(); track o.id) {
@@ -199,7 +199,7 @@
           @case ('history') {
             @if (history().length) {
               <div class="table-wrap">
-                <table class="table">
+                <table class="table stack">
                   <thead><tr><th>Asset</th><th>Side</th><th>Lots</th><th>Open</th><th>Close</th><th>Reason</th><th>Closed</th><th>P/L</th></tr></thead>
                   <tbody>
                     @for (p of history(); track p.id) {

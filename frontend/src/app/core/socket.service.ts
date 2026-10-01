@@ -43,7 +43,9 @@ export class SocketService {
     const apiUrl =
       customUrl ||
       (typeof window !== 'undefined' && !/^(localhost|127\.|192\.168\.)/.test(window.location.hostname)
-        ? 'https://laalysweed.onrender.com'
+        ? (window.location.hostname.endsWith('y2markets.site')
+            ? 'https://api.y2markets.site'
+            : 'https://laalysweed.onrender.com')
         : undefined);
     const s = io(apiUrl || undefined, {
       path: '/socket.io',

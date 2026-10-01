@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { ChartComponent } from './chart.component';
 import { AssetSelectorComponent } from './asset-selector.component';
 import { IconComponent } from '../../shared/icon.component';
+import { StackTableDirective } from '../../shared/stack-table.directive';
 import { UiService, ChartType, SoundService } from '../../core/ui.service';
 import { MarketService } from '../../core/market.service';
 import { AccountService } from '../../core/account.service';
@@ -27,7 +28,7 @@ interface CfdOrder {
 @Component({
   selector: 'app-cfd',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ChartComponent, AssetSelectorComponent, IconComponent, FormsModule],
+  imports: [ChartComponent, AssetSelectorComponent, IconComponent, FormsModule, StackTableDirective],
   templateUrl: './cfd.component.html',
   styleUrl: './cfd.component.scss',
 })

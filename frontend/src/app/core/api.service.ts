@@ -14,7 +14,9 @@ export class ApiService {
       const custom = (window as unknown as { __API_URL__?: string }).__API_URL__;
       if (custom) return `${custom.replace(/\/+$/, '')}/api`;
       if (!/^(localhost|127\.|192\.168\.)/.test(window.location.hostname)) {
-        return 'https://laalysweed.onrender.com/api';
+        return window.location.hostname.endsWith('y2markets.site')
+          ? 'https://api.y2markets.site/api'
+          : 'https://laalysweed.onrender.com/api';
       }
     }
     return '/api';

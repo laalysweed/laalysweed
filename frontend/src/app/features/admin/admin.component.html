@@ -58,7 +58,7 @@
     @case ('users') {
       <div class="toolbar"><input class="input sm" placeholder="Search username or e-mail" [ngModel]="userQ()" (ngModelChange)="userQ.set($event)" (keyup.enter)="searchUsers()" /><button class="btn btn-primary sm" (click)="searchUsers()">Search</button><span class="muted">{{ users().total }} users</span></div>
       <div class="panel table-wrap">
-        <table class="table">
+        <table class="table stack">
           <thead><tr><th>User</th><th>E-mail</th><th>Real cash</th><th>KYC</th><th>Role</th><th>Status</th><th>Joined</th></tr></thead>
           <tbody>
             @for (u of users().rows; track u.id) {
@@ -99,7 +99,7 @@
         <input class="input sm" placeholder="Rejection note" [ngModel]="note()" (ngModelChange)="note.set($event)" />
       </div>
       <div class="panel table-wrap">
-        <table class="table">
+        <table class="table stack">
           <thead><tr><th>Date</th><th>User</th><th>Method</th><th>Amount</th><th>Reference</th><th>Status</th><th></th></tr></thead>
           <tbody>
             @for (d of deposits(); track d.id) {
@@ -179,7 +179,7 @@
         <input class="input sm" placeholder="Payout tx ref (USDT)" [ngModel]="txRef()" (ngModelChange)="txRef.set($event)" />
       </div>
       <div class="panel table-wrap">
-        <table class="table">
+        <table class="table stack">
           <thead><tr><th>Date</th><th>User</th><th>Checks</th><th>Method</th><th>Amount</th><th>Destination</th><th>Status</th><th></th></tr></thead>
           <tbody>
             @for (w of withdrawals(); track w.id) {
@@ -207,7 +207,7 @@
     @case ('assets') {
       <p class="muted">Payout % is the profit paid on a winning fixed-time trade. OTC price generation parameters are intentionally not editable here.</p>
       <div class="panel table-wrap">
-        <table class="table">
+        <table class="table stack">
           <thead><tr><th>Asset</th><th>Source</th><th>Price</th><th>Enabled</th><th>Payout %</th><th>Min $</th><th>Max $</th><th>CFD</th><th></th></tr></thead>
           <tbody>
             @for (a of assets(); track a.symbol) {
@@ -313,7 +313,7 @@
         <button class="btn btn-primary sm" (click)="loadLedger()">Filter</button><span class="muted">{{ ledger().total }} entries</span>
       </div>
       <div class="panel table-wrap">
-        <table class="table">
+        <table class="table stack">
           <thead><tr><th>Time</th><th>User</th><th>Account</th><th>Type</th><th>Bucket</th><th>Amount</th><th>Balance after</th><th>Ref</th><th>Note</th></tr></thead>
           <tbody>
             @for (l of ledger().rows; track l.id) {
@@ -337,7 +337,7 @@
         <button class="btn btn-primary sm" (click)="loadTrades()">Filter</button><span class="muted">{{ trades().total }} trades</span>
       </div>
       <div class="panel table-wrap">
-        <table class="table">
+        <table class="table stack">
           <thead><tr><th>Opened</th><th>User</th><th>Asset</th><th>Dir</th><th>Amount</th><th>Open</th><th>Close</th><th>Status</th><th>P/L</th><th></th></tr></thead>
           <tbody>
             @for (t of trades().rows; track t.id) {
@@ -387,7 +387,7 @@
         <button class="btn btn-primary" (click)="createTournament()" [disabled]="busy()">Create</button>
       </div>
       <div class="panel table-wrap">
-        <table class="table">
+        <table class="table stack">
           <thead><tr><th>Name</th><th>Status</th><th>Starts</th><th>Ends</th><th>Entry</th><th>Prize pool</th><th></th></tr></thead>
           <tbody>
             @for (t of tournaments(); track t.id) {

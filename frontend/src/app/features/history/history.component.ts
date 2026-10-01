@@ -32,18 +32,18 @@ import { dateTime, money, price, signedMoney } from '../../core/format';
         <div class="card-solid"><span>Net result</span><b [class.up-text]="summary().profit >= 0" [class.down-text]="summary().profit < 0">{{ signed(summary().profit) }}</b></div>
       </div>
       <div class="card-solid table-wrap flush">
-        <table class="table">
+        <table class="table stack">
           <thead><tr><th>Opened</th><th>Asset</th><th>Direction</th><th>Amount</th><th>Duration</th><th>Open → Close</th><th>Result</th></tr></thead>
           <tbody>
             @for (t of rows(); track t.id) {
               <tr (click)="detail.set(t)" class="click">
-                <td>{{ dt(t.openedAt) }}</td>
-                <td>{{ market.asset(t.symbol)?.name ?? t.symbol }}</td>
-                <td><span class="badge" [class.green]="t.direction === 'up'" [class.red]="t.direction === 'down'">{{ t.direction === 'up' ? '▲ BUY' : '▼ SELL' }}</span></td>
-                <td class="num">{{ money(t.amount) }}</td>
-                <td>{{ t.durationSec }}s</td>
-                <td class="num muted">{{ price(t.openPrice, prec(t.symbol)) }} → {{ price(t.closePrice, prec(t.symbol)) }}</td>
-                <td class="num"><b [class.up-text]="t.profit > 0" [class.down-text]="t.profit < 0">{{ signed(t.profit) }}</b></td>
+                <td data-label="Opened">{{ dt(t.openedAt) }}</td>
+                <td data-label="Asset">{{ market.asset(t.symbol)?.name ?? t.symbol }}</td>
+                <td data-label="Direction"><span class="badge" [class.green]="t.direction === 'up'" [class.red]="t.direction === 'down'">{{ t.direction === 'up' ? '▲ BUY' : '▼ SELL' }}</span></td>
+                <td data-label="Amount" class="num">{{ money(t.amount) }}</td>
+                <td data-label="Duration">{{ t.durationSec }}s</td>
+                <td data-label="Open → Close" class="num muted">{{ price(t.openPrice, prec(t.symbol)) }} → {{ price(t.closePrice, prec(t.symbol)) }}</td>
+                <td data-label="Result" class="num"><b [class.up-text]="t.profit > 0" [class.down-text]="t.profit < 0">{{ signed(t.profit) }}</b></td>
               </tr>
             } @empty {
               <tr><td colspan="7"><div class="empty">{{ loading() ? 'Loading…' : 'No closed trades on this account yet' }}</div></td></tr>

@@ -660,3 +660,211 @@
     }
   }
 }
+
+/* ---------------- phone / small tablet (desktop layout above is untouched) ---------------- */
+@include m.down(t.$bp-md) {
+  .cfd {
+    padding: 6px 6px 12px;
+    gap: 8px;
+    // In the scrolling column every block keeps its natural height instead of being squeezed.
+    > * {
+      flex: none;
+    }
+  }
+
+  .chart-card {
+    height: clamp(340px, calc(100dvh - 300px), 560px);
+    min-height: 0;
+    border-radius: 12px;
+  }
+
+  .tv-top {
+    height: 44px;
+    padding: 5px 6px;
+    gap: 2px;
+    ::ng-deep app-asset-selector .trigger {
+      height: 32px;
+      font-size: 13px;
+      padding: 0 8px;
+      max-width: 138px;
+      .name {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+    }
+    // Bars and candles look alike at phone size; keep candles + area so all timeframes fit.
+    .btn-group .t:first-child {
+      display: none;
+    }
+    .sep {
+      margin: 0 2px;
+      height: 18px;
+    }
+    .sep:nth-of-type(3),
+    .sep:nth-of-type(4),
+    .add-btn,
+    .split-btn,
+    .spacer {
+      display: none;
+    }
+    .t {
+      height: 32px;
+      min-width: 30px;
+      padding: 0 6px;
+      font-size: 12.5px;
+    }
+    .ind-btn {
+      padding: 0 7px;
+      span {
+        display: none;
+      }
+    }
+    .ind-menu {
+      position: fixed;
+      top: auto;
+      left: 12px;
+      right: 12px;
+      min-width: 0;
+      margin-top: 6px;
+    }
+  }
+
+  .chart {
+    min-height: 0;
+  }
+
+  .tv-legend {
+    top: 6px;
+    left: 8px;
+    right: 68px; // keep clear of the price scale
+    .legend-row {
+      gap: 6px;
+    }
+    .asset-ico,
+    .legend-title,
+    .live-dot {
+      display: none;
+    }
+    .ohlc-vals {
+      flex-wrap: wrap;
+      gap: 2px 7px;
+      font-size: 11px;
+      .k {
+        font-size: 10px;
+      }
+      .chg {
+        font-size: 11px;
+      }
+    }
+    .vol-row {
+      display: none;
+    }
+  }
+
+  /* order ticket: compact, two columns where it fits */
+  .order {
+    overflow: visible;
+    padding: 2px 0 0;
+    gap: 10px;
+  }
+  .quotes {
+    gap: 8px;
+    .q {
+      height: 62px;
+      border-radius: 12px;
+      span {
+        font-size: 14px;
+      }
+      b {
+        font-size: 17px;
+      }
+    }
+  }
+  .otype {
+    gap: 8px;
+    button {
+      height: 44px;
+      font-size: 12.5px;
+      br {
+        display: none;
+      }
+    }
+  }
+  .lots-h {
+    font-size: 14px;
+  }
+  .lots {
+    height: 50px;
+    button {
+      width: 40px;
+      height: 40px;
+    }
+    input {
+      font-size: 18px;
+    }
+  }
+  .cond .cond-h {
+    padding: 13px 14px;
+    font-size: 14px;
+  }
+  .cond .cond-b {
+    padding: 0 14px 14px;
+  }
+  .go {
+    height: 54px;
+    font-size: 19px;
+  }
+  .ai {
+    height: 42px;
+    font-size: 15px;
+  }
+
+  /* positions */
+  .b-head {
+    padding: 8px;
+    gap: 4px;
+    button {
+      height: 38px;
+      padding: 0 10px;
+      font-size: 14px;
+      gap: 6px;
+    }
+  }
+  .b-body {
+    min-height: 80px;
+    max-height: 420px;
+    .empty {
+      padding: 24px;
+      font-size: 15px;
+    }
+  }
+  .b-foot {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px 12px;
+    padding: 10px 12px 12px;
+    font-size: 13px;
+    .spacer {
+      display: none;
+    }
+    .ca {
+      grid-column: 1 / -1;
+      height: 40px;
+      white-space: normal;
+    }
+  }
+}
+
+@include m.down(t.$bp-sm) {
+  .tv-top {
+    .sep {
+      display: none;
+    }
+    .t {
+      min-width: 27px;
+      padding: 0 5px;
+    }
+  }
+}

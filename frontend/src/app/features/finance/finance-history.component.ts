@@ -34,17 +34,17 @@ const iso = (d: Date) => d.toISOString().slice(0, 10);
       <div class="card-solid"><div class="skeleton" style="height: 200px"></div></div>
     } @else if (rows().length) {
       <div class="card-solid table-wrap flush anim-fade">
-        <table class="table">
+        <table class="table stack">
           <thead><tr><th>Date</th><th>Type</th><th>Method</th><th>Amount</th><th>Status</th><th>Reference</th></tr></thead>
           <tbody>
             @for (r of rows(); track r.id) {
               <tr>
-                <td>{{ dt(r.createdAt) }}</td>
-                <td class="cap">{{ r.kind }}</td>
-                <td>{{ label(r.method) }}</td>
-                <td class="num" [class.up-text]="r.amount > 0" [class.down-text]="r.amount < 0"><b>{{ signed(r.amount) }}</b></td>
-                <td><span class="badge" [class]="tone(r.status)">{{ status(r.status) }}</span></td>
-                <td class="muted">{{ r.reference || '—' }}</td>
+                <td data-label="Date">{{ dt(r.createdAt) }}</td>
+                <td data-label="Type" class="cap">{{ r.kind }}</td>
+                <td data-label="Method">{{ label(r.method) }}</td>
+                <td data-label="Amount" class="num" [class.up-text]="r.amount > 0" [class.down-text]="r.amount < 0"><b>{{ signed(r.amount) }}</b></td>
+                <td data-label="Status"><span class="badge" [class]="tone(r.status)">{{ status(r.status) }}</span></td>
+                <td data-label="Reference" class="muted">{{ r.reference || '—' }}</td>
               </tr>
             }
           </tbody>

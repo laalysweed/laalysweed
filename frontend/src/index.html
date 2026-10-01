@@ -18,7 +18,7 @@
     />
     <!-- Backend URL: local dev uses the dev-server proxy; anywhere else talks to the Render API. -->
     <script>
-      window.__API_URL__ = window.__API_URL__ || (/^(localhost|127\.|192\.168\.)/.test(location.hostname) ? '' : 'https://laalysweed.onrender.com');
+      window.__API_URL__ = window.__API_URL__ || (/^(localhost|127\.|192\.168\.)/.test(location.hostname) ? '' : (location.hostname.endsWith('y2markets.site') ? 'https://api.y2markets.site' : 'https://laalysweed.onrender.com'));
     </script>
   </head>
   <body>

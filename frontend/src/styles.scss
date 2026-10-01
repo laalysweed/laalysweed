@@ -617,3 +617,60 @@ table.table {
     transition-duration: 1ms !important;
   }
 }
+
+/* Phones: tab rows scroll sideways instead of wrapping onto several lines. */
+@include m.down(t.$bp-sm) {
+  .tabs {
+    flex-wrap: nowrap !important;
+    overflow-x: auto;
+    scrollbar-width: none;
+    &::-webkit-scrollbar {
+      display: none;
+    }
+    button {
+      flex: none;
+    }
+  }
+}
+
+/* Phones: tables marked .stack turn each row into a labelled card (cells need data-label). */
+@include m.down(t.$bp-sm) {
+  table.table.stack {
+    thead {
+      display: none;
+    }
+    tbody,
+    tr,
+    td {
+      display: block;
+      width: 100%;
+    }
+    tr {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+    }
+    td {
+      padding: 5px 0 !important;
+      border: 0 !important;
+      text-align: right;
+      overflow-wrap: anywhere;
+      min-height: 0;
+      &::before {
+        content: attr(data-label);
+        float: left;
+        margin-right: 12px;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 600;
+        text-align: left;
+        line-height: 1.9;
+      }
+      &:empty {
+        display: none;
+      }
+      &:not([data-label])::before {
+        content: none;
+      }
+    }
+  }
+}

@@ -1305,3 +1305,70 @@
     }
   }
 }
+
+/* ---------------- phones ---------------- */
+@include m.down(t.$bp-sm) {
+  .promo-card {
+    gap: 14px;
+    padding: 14px;
+    margin-bottom: 10px;
+    align-items: flex-start;
+    h3 {
+      font-size: 16px;
+      margin-bottom: 4px;
+    }
+    p {
+      font-size: 13px;
+      line-height: 1.4;
+    }
+  }
+  .pc-ico {
+    width: 48px;
+    height: 48px;
+    border-radius: 10px;
+    ::ng-deep svg {
+      width: 24px;
+      height: 24px;
+    }
+  }
+  .lbl-lg {
+    font-size: 15px;
+    margin: 18px 0 8px;
+  }
+  .input.big {
+    height: 50px;
+    font-size: 16px;
+  }
+  .filters {
+    gap: 10px;
+    margin-bottom: 16px;
+    .kinds {
+      width: 100%;
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      gap: 8px;
+      scrollbar-width: none;
+      button {
+        flex: none;
+        height: 40px;
+        padding: 0 14px;
+        font-size: 14px;
+      }
+    }
+    .range {
+      margin-left: 0;
+      width: 100%;
+      height: 46px;
+      padding: 0 10px;
+      gap: 4px;
+      input {
+        flex: 1;
+        min-width: 0;
+        font-size: 13px;
+      }
+    }
+    .btn {
+      flex: 1;
+    }
+  }
+}

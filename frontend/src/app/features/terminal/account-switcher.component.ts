@@ -151,6 +151,18 @@ import { Account, ApiError } from '../../core/models';
       .bal app-icon.flip {
         transform: rotate(180deg);
       }
+      @media (max-width: 420px) {
+        .trigger {
+          padding: 4px 4px;
+        }
+        .kind {
+          font-size: 10.5px;
+        }
+        .bal {
+          font-size: 17px;
+          gap: 3px;
+        }
+      }
 
       .backdrop {
         position: fixed;

@@ -328,3 +328,18 @@
     }
   }
 }
+
+@media (max-width: 420px) {
+  .avatar {
+    width: 36px;
+    height: 36px;
+    .face {
+      font-size: 13px;
+    }
+    .spark {
+      top: -5px;
+      left: -4px;
+      font-size: 12px;
+    }
+  }
+}

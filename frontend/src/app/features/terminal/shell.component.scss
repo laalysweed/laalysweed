@@ -530,3 +530,27 @@
     }
   }
 }
+
+/* ---------------- small phones: keep every header control on screen ---------------- */
+@media (max-width: 420px) {
+  .topbar {
+    gap: 4px;
+    padding: 0 8px;
+  }
+  .brand ::ng-deep svg {
+    width: 36px;
+    height: auto;
+  }
+  .right {
+    gap: 6px;
+    min-width: 0;
+  }
+  .sound-toggle {
+    width: 32px;
+    height: 32px;
+  }
+  .topup {
+    height: 32px;
+    padding: 0 9px;
+  }
+}
