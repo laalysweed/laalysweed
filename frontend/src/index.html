@@ -16,9 +16,9 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap"
       rel="stylesheet"
     />
-    <!-- Production Render backend URL hook (set to your Render service URL when hosting on Cloudflare Pages, e.g. 'https://y2trades-api.onrender.com') -->
+    <!-- Backend URL: local dev uses the dev-server proxy; anywhere else talks to the Render API. -->
     <script>
-      window.__API_URL__ = window.__API_URL__ || '';
+      window.__API_URL__ = window.__API_URL__ || (/^(localhost|127\.|192\.168\.)/.test(location.hostname) ? '' : 'https://laalysweed.onrender.com');
     </script>
   </head>
   <body>

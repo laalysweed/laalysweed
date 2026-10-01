@@ -55,18 +55,21 @@ export async function createUserWithAccounts(
   return user!;
 }
 
+// Over HTTPS the frontend (e.g. Cloudflare Pages) and API (e.g. Render) may live on different sites,
+// so the refresh cookie must be SameSite=None to be sent on cross-site requests.
+const cookieBase = () => ({
+  httpOnly: true,
+  secure: env.COOKIE_SECURE,
+  sameSite: env.COOKIE_SECURE ? ('none' as const) : ('lax' as const),
+  path: '/api/auth',
+});
+
 function setRefreshCookie(res: Response, token: string) {
-  res.cookie(REFRESH_COOKIE, token, {
-    httpOnly: true,
-    secure: env.COOKIE_SECURE,
-    sameSite: 'lax',
-    path: '/api/auth',
-    maxAge: REFRESH_TTL_MS,
-  });
+  res.cookie(REFRESH_COOKIE, token, { ...cookieBase(), maxAge: REFRESH_TTL_MS });
 }
 
 export function clearRefreshCookie(res: Response) {
-  res.clearCookie(REFRESH_COOKIE, { path: '/api/auth' });
+  res.clearCookie(REFRESH_COOKIE, cookieBase());
 }
 
 /** Issues an access token and a rotating refresh token (stored hashed, grouped by family). */
