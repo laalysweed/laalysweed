@@ -13,7 +13,13 @@ export interface Candle {
 /** Supported chart timeframes in seconds: S1 (line chart), S5..M15, plus H1 for pro mode. */
 export const TIMEFRAMES = [1, 5, 10, 15, 30, 60, 120, 300, 600, 900, 3600] as const;
 
-export function bucketTicks(ticks: StoredTick[], tf: number): Candle[] {
+export interface TickLike {
+  ts: number;
+  price: number;
+  vol: number;
+}
+
+export function bucketTicks(ticks: TickLike[], tf: number): Candle[] {
   const out: Candle[] = [];
   const ms = tf * 1000;
   for (const t of ticks) {

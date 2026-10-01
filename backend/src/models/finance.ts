@@ -63,6 +63,7 @@ const withdrawalSchema = new Schema(
       default: 'pending_review',
       index: true,
     },
+    deducted: { type: Boolean, default: false },
     reviewedBy: { type: Schema.Types.ObjectId, ref: 'User' },
     reviewNote: String,
     provider: {

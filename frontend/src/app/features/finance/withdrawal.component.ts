@@ -48,17 +48,11 @@ import { METHOD_LABELS, STATUS_LABELS, dateTime, money, statusTone } from '../..
             <div class="field"><label>{{ method() === 'usdt_trc20' ? 'TRON (TRC-20)' : 'BNB Smart Chain (BEP20)' }} wallet address</label>
               <input class="input big" [placeholder]="method() === 'usdt_trc20' ? 'T…' : '0x…'" [ngModel]="address()" (ngModelChange)="address.set($event)" /></div>
           }
-          @if (popup()?.blocking) {
-            <div class="alert" style="background: rgba(239, 68, 68, 0.14); border: 1px solid rgba(239, 68, 68, 0.35); color: #fca5a5; cursor: pointer; display: flex; align-items: center; gap: 8px;" (click)="showPopup.set(true)">
-              <app-icon name="lock" [size]="16" />
-              <span><b>Withdrawals Restricted:</b> {{ popup()?.title || 'Notice' }} (Click to view)</span>
-            </div>
-          }
           @if (error()) { <div class="alert">{{ error() }}</div> }
-          <button class="btn btn-primary lg block" (click)="submit()" [disabled]="busy() || !auth.user()?.emailVerified || popup()?.blocking">
+          <button class="btn btn-primary lg block" (click)="submit()" [disabled]="busy() || !auth.user()?.emailVerified">
             @if (busy()) { <span class="spinner"></span> } @else { Request withdrawal }
           </button>
-          <p class="muted small">Requests are reviewed by our finance team, usually within a few hours. Funds are reserved from your balance immediately and returned if the request is cancelled or rejected.</p>
+          <p class="muted small">Requests are reviewed by our finance team, usually within a few hours. Funds are deducted from your balance once the withdrawal is approved.</p>
         </div>
 
         <h3 class="sub-title">Your withdrawals</h3>
@@ -91,7 +85,7 @@ import { METHOD_LABELS, STATUS_LABELS, dateTime, money, statusTone } from '../..
       </aside>
     </div>
 
-    @if (showPopup() && popup(); as p) {
+    @if (showPopup() && displayPopup(); as p) {
       <div class="popup-backdrop" (click)="!p.blocking && showPopup.set(false)"></div>
       <div class="w-user-popup-modal anim-pop" [class]="'tone-' + p.type">
         <header>
@@ -152,8 +146,9 @@ export class WithdrawalComponent {
   protected status = (s: string) => STATUS_LABELS[s] ?? s;
   protected label = (m: string) => METHOD_LABELS[m] ?? m;
 
-  // Admin configurable withdrawal popup
+  // Admin configurable withdrawal popup & display state
   protected popup = signal<WithdrawalPopupConfig | null>(null);
+  protected displayPopup = signal<WithdrawalPopupConfig | null>(null);
   protected showPopup = signal(false);
 
   constructor() {
@@ -167,10 +162,8 @@ export class WithdrawalComponent {
       void this.api.get<{ active: boolean; popup: WithdrawalPopupConfig | null }>('/finance/withdrawal-popup').then((res) => {
         if (res?.active && res.popup) {
           this.popup.set(res.popup);
-          this.showPopup.set(true);
         } else {
           this.popup.set(null);
-          this.showPopup.set(false);
         }
       });
     };
@@ -187,21 +180,41 @@ export class WithdrawalComponent {
   }
 
   protected async submit() {
+    // If the admin configured a blocking notice, show the popup now upon clicking the withdrawal button
     if (this.popup()?.blocking) {
+      this.displayPopup.set(this.popup());
       this.showPopup.set(true);
-      this.error.set(this.popup()?.message || 'Withdrawals are currently restricted for your account');
       return;
     }
     this.busy.set(true);
     this.error.set(null);
     try {
-      await this.api.post('/finance/withdrawals', {
+      const created = await this.api.post<Withdrawal>('/finance/withdrawals', {
         method: this.method(),
         amount: Math.round(Number(this.amount()) * 100),
         phone: this.method() === 'mpesa' ? this.phone() : undefined,
         address: this.method() !== 'mpesa' ? this.address() : undefined,
       });
-      this.toast.success('Withdrawal requested. We will notify you when it is paid.');
+      if (created) {
+        this.list.update((l) => [created, ...l]);
+      }
+
+      // Show popup instead of toast notification
+      const activeCustom = this.popup();
+      if (activeCustom && activeCustom.enabled) {
+        this.displayPopup.set(activeCustom);
+      } else {
+        this.displayPopup.set({
+          enabled: true,
+          title: 'Withdrawal Received',
+          message: 'Your withdrawal request has been received and is pending review by our finance team. Your balance will be deducted once the withdrawal is approved.',
+          type: 'success',
+          blocking: false,
+          buttonText: 'Understood',
+          buttonAction: 'close',
+        });
+      }
+      this.showPopup.set(true);
     } catch (e) {
       this.error.set((e as ApiError).message);
     } finally {
@@ -209,7 +222,7 @@ export class WithdrawalComponent {
     }
   }
 
-  protected handlePopupAction(action: string) {
+  protected handlePopupAction(action?: string) {
     this.showPopup.set(false);
     if (action === 'support') {
       void this.router.navigate(['/app/help']);

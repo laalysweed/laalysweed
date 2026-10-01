@@ -1,5 +1,6 @@
+import { Types } from 'mongoose';
 import { Withdrawal, WithdrawalT } from '../models/finance';
-import { Account, AccountT } from '../models/account';
+import { Account, AccountT, LedgerEntry } from '../models/account';
 import { User } from '../models/user';
 import { env } from '../config/env';
 import { badRequest, forbidden, notFound } from '../lib/errors';
@@ -62,46 +63,60 @@ export async function requestWithdrawal(userId: string, inp: { method: 'mpesa' |
   const acc = await Account.findOne({ userId, type: 'real' }).lean<AccountT>();
   if (!acc) throw notFound('Real account not found');
 
-  const w = await withTxn(async (session) => {
-    const [doc] = await Withdrawal.create(
-      [
-        {
-          userId,
-          accountId: acc._id,
-          method: inp.method,
-          amount: inp.amount,
-          localAmount: inp.method === 'mpesa' ? Math.floor((inp.amount / 100) * env.KES_PER_USD) : inp.amount / 100,
-          localCurrency: inp.method === 'mpesa' ? 'KES' : 'USDT',
-          phone,
-          address,
-        },
-      ],
-      { session },
+  // Verify the user has sufficient available balance, taking pending withdrawal requests into account
+  const pendingDocs = await Withdrawal.find({ userId, status: 'pending_review' }, { amount: 1 }).lean();
+  const pendingTotal = pendingDocs.reduce((sum, d) => sum + (d.amount || 0), 0);
+  const availableToWithdraw = (acc.balance ?? 0) - pendingTotal;
+  if (availableToWithdraw < inp.amount) {
+    throw badRequest(
+      `Insufficient available balance. Available: $${(Math.max(0, availableToWithdraw) / 100).toFixed(2)} (Current balance: $${((acc.balance ?? 0) / 100).toFixed(2)}, Pending requests: $${(pendingTotal / 100).toFixed(2)})`,
+      'INSUFFICIENT_FUNDS',
     );
-    // Hold the funds immediately (only withdrawable cash, never bonus funds).
-    await postEntry(session, { accountId: acc._id, type: 'withdrawal_hold', bucket: 'cash', amount: -inp.amount, refKind: 'withdrawal', refId: doc!._id });
-    return doc!.toObject() as WithdrawalT;
-  });
+  }
+
+  // Create the withdrawal request. Funds will only be deducted after approval by admin.
+  const [doc] = await Withdrawal.create([
+    {
+      userId,
+      accountId: acc._id,
+      method: inp.method,
+      amount: inp.amount,
+      localAmount: inp.method === 'mpesa' ? Math.floor((inp.amount / 100) * env.KES_PER_USD) : inp.amount / 100,
+      localCurrency: inp.method === 'mpesa' ? 'KES' : 'USDT',
+      phone,
+      address,
+      status: 'pending_review',
+      deducted: false,
+    },
+  ]);
+  const w = doc!.toObject() as WithdrawalT;
   emitW(w);
-  void emitAccounts(userId);
   return publicWithdrawal(w);
 }
 
 async function refund(w: WithdrawalT, status: 'cancelled' | 'rejected' | 'failed', note?: string, actorId?: string) {
+  let wasDeducted = false;
   const out = await withTxn(async (session) => {
-    const from = status === 'failed' ? ['processing'] : ['pending_review'];
-    const upd = await Withdrawal.findOneAndUpdate(
-      { _id: w._id, status: { $in: from } },
-      { $set: { status, reviewNote: note, ...(actorId ? { reviewedBy: actorId } : {}) } },
-      { new: true, session },
-    ).lean<WithdrawalT>();
-    if (!upd) return null;
-    await postEntry(session, { accountId: w.accountId, type: 'withdrawal_reversal', bucket: 'cash', amount: w.amount, refKind: 'withdrawal', refId: w._id, actorId, note });
-    return upd;
+    const from = status === 'failed' ? ['processing'] : ['pending_review', 'processing'];
+    const doc = await Withdrawal.findOne({ _id: w._id, status: { $in: from } }).session(session);
+    if (!doc) return null;
+
+    wasDeducted = doc.deducted === true || (doc.deducted === undefined && (await LedgerEntry.exists({ refKind: 'withdrawal', refId: doc._id, type: 'withdrawal_hold' }).session(session)) !== null);
+    doc.status = status;
+    doc.reviewNote = note;
+    if (actorId) doc.reviewedBy = new Types.ObjectId(actorId);
+    doc.deducted = false;
+    await doc.save({ session });
+
+    // Only reverse from ledger if funds were previously deducted upon approval
+    if (wasDeducted) {
+      await postEntry(session, { accountId: doc.accountId, type: 'withdrawal_reversal', bucket: 'cash', amount: doc.amount, refKind: 'withdrawal', refId: doc._id, actorId, note });
+    }
+    return doc.toObject() as WithdrawalT;
   });
   if (out) {
     emitW(out);
-    void emitAccounts(w.userId);
+    if (wasDeducted) void emitAccounts(w.userId);
   }
   return out;
 }
@@ -119,13 +134,45 @@ export async function rejectWithdrawal(adminId: string, id: string, note: string
 }
 
 export async function approveWithdrawal(adminId: string, id: string) {
-  const w = await Withdrawal.findOneAndUpdate(
-    { _id: id, status: 'pending_review' },
-    { $set: { status: 'processing', reviewedBy: adminId, 'provider.originatorConversationId': `Y2-${randomToken(9)}` } },
-    { new: true },
-  ).lean<WithdrawalT>();
-  if (!w) throw notFound('Withdrawal not pending');
+  const w = await withTxn(async (session) => {
+    const doc = await Withdrawal.findOne({ _id: id, status: 'pending_review' }).session(session);
+    if (!doc) throw notFound('Withdrawal not pending');
+
+    // Deduct user balance now upon approval if not yet deducted
+    const wasDeducted = doc.deducted === true || (doc.deducted === undefined && (await LedgerEntry.exists({ refKind: 'withdrawal', refId: doc._id, type: 'withdrawal_hold' }).session(session)) !== null);
+    if (!wasDeducted) {
+      try {
+        await postEntry(session, {
+          accountId: doc.accountId,
+          type: 'withdrawal_hold',
+          bucket: 'cash',
+          amount: -doc.amount,
+          refKind: 'withdrawal',
+          refId: doc._id,
+          actorId: adminId,
+          note: 'Withdrawal approved by admin',
+        });
+      } catch (err: unknown) {
+        if ((err as { code?: string })?.code === 'INSUFFICIENT_FUNDS' || (err as Error)?.message?.includes('Insufficient')) {
+          throw badRequest('Cannot approve: user does not have sufficient balance in their account', 'INSUFFICIENT_FUNDS');
+        }
+        throw err;
+      }
+      doc.deducted = true;
+    }
+
+    doc.status = 'processing';
+    doc.reviewedBy = new Types.ObjectId(adminId);
+    doc.provider = {
+      ...doc.provider,
+      originatorConversationId: `Y2-${randomToken(9)}`,
+    };
+    await doc.save({ session });
+    return doc.toObject() as WithdrawalT;
+  });
+
   emitW(w);
+  void emitAccounts(w.userId);
   if (w.method === 'mpesa') {
     try {
       const r = await b2cPayout({
