@@ -15,7 +15,7 @@ const optionalStr = z
 const schema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   PORT: z.coerce.number().default(4000),
-  APP_URL: z.string().default('http://localhost:4200'),
+  APP_URL: z.string().default(process.env['NODE_ENV'] === 'production' || !!process.env['RENDER'] ? 'https://y2markets.site' : 'http://localhost:4200'),
   API_PUBLIC_URL: z.string().default('http://localhost:4000'),
   CORS_ORIGINS: optionalStr, // defaults to APP_URL (+ its www / non-www twin)
   MONGO_URI: optionalStr,

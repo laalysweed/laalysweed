@@ -15,7 +15,7 @@ import { Account, ApiError } from '../../core/models';
   imports: [IconComponent, AnimatedNumberComponent, RouterLink],
   template: `
     <button class="trigger" (click)="open.set(!open())" [attr.aria-expanded]="open()">
-      <span class="kind">{{ product() }} REAL <span class="cur">USD</span></span>
+      <span class="kind" [class.demo]="!isReal()" [class.real]="isReal()">{{ product() }} {{ accountTypeLabel() }} <span class="cur">USD</span></span>
       <span class="bal">
         <app-num [value]="accounts.available()" [flashOnChange]="true" />
         <app-icon name="chevron-down" [size]="14" [class.flip]="open()" />
@@ -123,6 +123,13 @@ import { Account, ApiError } from '../../core/models';
         color: #94a3b8;
         letter-spacing: 0.04em;
         white-space: nowrap;
+        transition: color 0.18s ease;
+      }
+      .kind.demo {
+        color: #38bdf8;
+      }
+      .kind.real {
+        color: #eab308;
       }
       .cur {
         margin-left: 6px;
@@ -310,6 +317,11 @@ export class AccountSwitcherComponent {
   protected fmt = money;
 
   protected isReal = computed(() => this.accounts.active()?.type === 'real');
+  protected accountTypeLabel = computed(() => {
+    const a = this.accounts.active();
+    if (a?.type === 'tournament') return a.tournamentName?.toUpperCase() ?? 'TOURNAMENT';
+    return a?.type === 'demo' ? 'DEMO' : 'REAL';
+  });
 
   protected realBalance = computed(() => {
     const a = this.accounts.real();
@@ -324,7 +336,11 @@ export class AccountSwitcherComponent {
   protected async selectAccount(product: 'OTC' | 'CFD', kind: 'real' | 'demo') {
     this.open.set(false);
     this.sound.playClick();
-    const target = kind === 'real' ? this.accounts.real() : this.accounts.demo();
+    let target = kind === 'real' ? this.accounts.real() : this.accounts.demo();
+    if (!target) {
+      await this.accounts.load();
+      target = kind === 'real' ? this.accounts.real() : this.accounts.demo();
+    }
     if (target) {
       await this.accounts.switchTo(target.id);
       this.toast.info(`Switched to ${product} ${kind === 'real' ? 'Real' : 'Demo'}`);
