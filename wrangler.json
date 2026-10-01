@@ -1,0 +1,11 @@
+{
+  "name": "y2markets",
+  "compatibility_date": "2024-11-01",
+  "build": {
+    "command": "cd frontend && npm install && npm run build"
+  },
+  "assets": {
+    "directory": "./frontend/dist/client/browser",
+    "not_found_handling": "single-page-application"
+  }
+}
