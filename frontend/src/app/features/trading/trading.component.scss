@@ -37,7 +37,8 @@
   flex-direction: column;
   @include m.down(t.$bp-md) {
     flex: 1;
-    min-height: 0;
+    min-height: 350px;
+    height: 55vh;
   }
 }
 
@@ -237,7 +238,8 @@
   min-height: 0;
   margin: -58px 34px 0 0;
   @include m.down(t.$bp-md) {
-    margin: -40px 26px 0 0;
+    margin: -40px 10px 0 0;
+    min-height: 250px;
   }
 }
 
