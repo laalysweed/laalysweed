@@ -1,5 +1,5 @@
 {
-  "name": "y2markets",
+  "name": "laalysweed",
   "compatibility_date": "2024-11-01",
   "build": {
     "command": "npm run build"
