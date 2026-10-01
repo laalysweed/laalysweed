@@ -364,3 +364,44 @@ form {
   p { margin: 0; }
 }
 
+
+/* ---------- e-mail verification code step ---------- */
+.verify-pane {
+  .pane-header {
+    text-align: center;
+  }
+  .mail-badge {
+    display: inline-grid;
+    place-items: center;
+    width: 64px;
+    height: 64px;
+    margin-bottom: 14px;
+    border-radius: 18px;
+    color: #38bdf8;
+    background: linear-gradient(135deg, rgba(45, 212, 191, 0.18), rgba(56, 189, 248, 0.18));
+    box-shadow: inset 0 0 0 1px rgba(56, 189, 248, 0.35);
+  }
+  .sub b {
+    color: #e6eaf2;
+  }
+  .code {
+    height: 62px;
+    font-size: 30px;
+    font-weight: 800;
+    letter-spacing: 0.5em;
+    padding-left: 0.5em; // balances the trailing letter-spacing so digits sit centred
+  }
+}
+.resend-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px 12px;
+  margin-top: 14px;
+  font-size: 13px;
+  .link:disabled {
+    opacity: 0.55;
+    cursor: default;
+  }
+}

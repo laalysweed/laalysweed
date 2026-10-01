@@ -6,10 +6,11 @@ import { Account } from '../models/account';
 import { env } from '../config/env';
 import { randomToken, sha256 } from '../lib/crypto';
 import { REFRESH_TTL_MS, signAccess } from '../lib/jwt';
-import { unauthorized } from '../lib/errors';
+import { badRequest, unauthorized } from '../lib/errors';
 import { postEntry } from './ledger.service';
 import { getBonusConfig } from './settings.service';
-import { sendMail } from '../lib/mailer';
+import { mailCanSend, sendMail } from '../lib/mailer';
+import crypto from 'node:crypto';
 
 export const REFRESH_COOKIE = 'y2_rt';
 const BCRYPT_ROUNDS = 12;
@@ -128,6 +129,57 @@ export async function sendVerificationEmail(userId: Types.ObjectId | string) {
     label: 'Verify e-mail',
     url: `${env.APP_URL}/verify-email?token=${token}`,
   });
+}
+
+/* ---------- 6-digit e-mail verification codes ---------- */
+
+export const CODE_TTL_MS = 15 * 60_000;
+export const CODE_RESEND_COOLDOWN_MS = 60_000;
+const CODE_MAX_ATTEMPTS = 5;
+const codeHash = (userId: string, code: string) => sha256(`${userId}:${code}:${env.JWT_REFRESH_SECRET}`);
+
+/** "jane.doe@gmail.com" → "ja•••@gmail.com" */
+export const maskEmail = (e: string) => e.replace(/^(.{1,2})[^@]*(@.*)$/, (_m, a: string, b: string) => `${a}•••${b}`);
+
+/** Seconds until another code may be sent (0 = now). */
+export function codeCooldown(u: Pick<UserT, 'emailCode'>) {
+  const sentAt = u.emailCode?.sentAt ? new Date(u.emailCode.sentAt).getTime() : 0;
+  return Math.max(0, Math.ceil((sentAt + CODE_RESEND_COOLDOWN_MS - Date.now()) / 1000));
+}
+
+/** Generates, stores (hashed) and e-mails a fresh code. Resolves false when the e-mail could not be sent. */
+export async function sendVerificationCode(userId: Types.ObjectId | string): Promise<boolean> {
+  if (!(await mailCanSend())) return false;
+  const code = String(crypto.randomInt(0, 1_000_000)).padStart(6, '0');
+  const u = await User.findByIdAndUpdate(
+    userId,
+    { $set: { emailCode: { hash: codeHash(String(userId), code), expires: new Date(Date.now() + CODE_TTL_MS), attempts: 0, sentAt: new Date() } } },
+    { new: true },
+  ).lean();
+  if (!u) return false;
+  const first = u.fullName.split(' ')[0]?.replace(/[<>&]/g, '') ?? '';
+  const body = `Use this code to verify your e-mail address and finish signing in to Y2 Markets:
+    <div style="margin:22px 0 8px;font-size:34px;font-weight:800;letter-spacing:10px;color:#E6EAF2;font-family:'Courier New',monospace">${code}</div>
+    The code expires in 15 minutes. If you did not create a Y2 Markets account, you can ignore this e-mail.`;
+  const sent = await sendMail(u.email, `${code} is your Y2 Markets verification code`, `Hi ${first}, verify your e-mail`, body);
+  if (!sent) await User.updateOne({ _id: u._id }, { $unset: { emailCode: 1 } });
+  return sent;
+}
+
+/** Checks a code; on success marks the e-mail verified. Throws a user-facing error otherwise. */
+export async function confirmVerificationCode(userId: string, code: string) {
+  const u = await User.findById(userId, { emailCode: 1, emailVerified: 1 }).lean<UserT>();
+  if (!u) throw unauthorized('Account unavailable', 'NO_SESSION');
+  if (u.emailVerified) return;
+  const c = u.emailCode;
+  if (!c?.hash || !c.expires || new Date(c.expires).getTime() < Date.now()) throw badRequest('This code has expired. Tap "Resend code" to get a new one.', 'CODE_EXPIRED');
+  if ((c.attempts ?? 0) >= CODE_MAX_ATTEMPTS) throw badRequest('Too many wrong attempts. Tap "Resend code" to get a new one.', 'CODE_LOCKED');
+  if (codeHash(userId, code) !== c.hash) {
+    await User.updateOne({ _id: userId }, { $inc: { 'emailCode.attempts': 1 } });
+    const left = CODE_MAX_ATTEMPTS - (c.attempts ?? 0) - 1;
+    throw badRequest(left > 0 ? `Incorrect code. ${left} attempt${left === 1 ? '' : 's'} left.` : 'Too many wrong attempts. Tap "Resend code" to get a new one.', 'BAD_CODE');
+  }
+  await User.updateOne({ _id: userId }, { $set: { emailVerified: true }, $unset: { emailCode: 1, emailVerifyTokenHash: 1, emailVerifyExpires: 1 } });
 }
 
 export async function sendPasswordReset(email: string) {

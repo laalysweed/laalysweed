@@ -37,7 +37,7 @@
         </div>
         <button class="btn btn-primary" (click)="save()" [disabled]="saving()">Save changes</button>
         @if (!u.emailVerified) {
-          <div class="notice"><app-icon name="warn" [size]="18" /> Your e-mail isn't verified yet. <button class="link" (click)="resend()">Resend link</button></div>
+          <div class="notice"><app-icon name="warn" [size]="18" /> <div>Your e-mail isn't verified yet.<app-email-verify-inline /></div></div>
         }
       </section>
 

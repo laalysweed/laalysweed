@@ -5,6 +5,12 @@ import { firstValueFrom } from 'rxjs';
 import { ApiService } from './api.service';
 import { AuthResponse, User } from './models';
 
+/** Server reply to a sign-in action: a session, a 2FA challenge, or an e-mail code to enter. */
+export type SignInStep =
+  | AuthResponse
+  | { twoFactorRequired: true; ticket: string }
+  | { verificationRequired: true; ticket: string; email: string; resendIn: number };
+
 /**
  * Holds the in-memory access token (15 min) and current user.
  * The refresh token lives in an httpOnly cookie; `refresh()` is de-duplicated so parallel
@@ -58,9 +64,22 @@ export class AuthService {
   }
 
   async login(identifier: string, password: string) {
-    const r = await this.api.post<AuthResponse | { twoFactorRequired: true; ticket: string }>('/auth/login', { identifier, password });
-    if ('twoFactorRequired' in r) return r;
-    this.setSession(r);
+    return this.signInStep(await this.api.post<SignInStep>('/auth/login', { identifier, password }));
+  }
+
+  /** Enter the 6-digit e-mail code; may lead to a 2FA challenge or straight into the app. */
+  async verifyCode(ticket: string, code: string) {
+    return this.signInStep(await this.api.post<SignInStep>('/auth/verify-code', { ticket, code }));
+  }
+
+  /** Sends a new code. If e-mail is paused the server signs the user in instead (returns a session). */
+  async resendCode(ticket: string) {
+    const r = await this.api.post<SignInStep | { ok: true; email: string; resendIn: number }>('/auth/resend-code', { ticket });
+    return 'ok' in r ? r : this.signInStep(r);
+  }
+
+  private signInStep(r: SignInStep) {
+    if ('accessToken' in r) this.setSession(r);
     return r;
   }
 
@@ -71,9 +90,7 @@ export class AuthService {
   }
 
   async register(body: { fullName: string; username: string; email: string; password: string; referrer?: string; acceptTerms: boolean }) {
-    const r = await this.api.post<AuthResponse>('/auth/register', body);
-    this.setSession(r);
-    return r;
+    return this.signInStep(await this.api.post<SignInStep>('/auth/register', body));
   }
 
   async logout() {

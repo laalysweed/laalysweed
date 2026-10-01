@@ -27,6 +27,8 @@ const schema = z.object({
   BINANCE_WS_URL: z.string().default('wss://stream.binance.com:9443/stream'),
   BINANCE_REST_URL: z.string().default('https://api.binance.com'),
   TICK_RETENTION_DAYS: z.coerce.number().default(0),
+  BREVO_API_KEY: optionalStr, // xkeysib-…: sends over Brevo's HTTPS API (preferred; works where SMTP ports are blocked)
+  BREVO_API_URL: z.string().default('https://api.brevo.com'),
   SMTP_HOST: optionalStr,
   SMTP_PORT: z.coerce.number().default(587),
   SMTP_USER: optionalStr,

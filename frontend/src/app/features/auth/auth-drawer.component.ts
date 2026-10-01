@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, u
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AuthDrawerService } from './auth-drawer.service';
-import { AuthService } from '../../core/auth.service';
+import { AuthService, SignInStep } from '../../core/auth.service';
 import { ApiService } from '../../core/api.service';
 import { ToastService } from '../../core/toast.service';
 import { IconComponent } from '../../shared/icon.component';
@@ -193,7 +193,8 @@ export class AuthDrawerComponent {
       return;
     }
     await this.run(async () => {
-      await this.auth.register({
+      this.newAccount = true;
+      const r = await this.auth.register({
         fullName: this.fullName().trim(),
         username: u,
         email: em,
@@ -201,22 +202,80 @@ export class AuthDrawerComponent {
         referrer: this.referrer().trim().toLowerCase() || undefined,
         acceptTerms: true,
       });
-      this.toast.success('Welcome to Y2 Markets! Your $10,000 demo account is ready.');
-      this.finish();
+      this.handleStep(r);
     });
   }
 
   protected async login() {
     if (!this.identifier().trim() || !this.password()) return this.error.set('Enter your e-mail/username and password');
     await this.run(async () => {
-      const r = await this.auth.login(this.identifier().trim(), this.password());
-      if ('twoFactorRequired' in r) {
-        this.ticket.set(r.ticket);
-        this.svc.mode.set('twofactor');
+      this.newAccount = false;
+      this.handleStep(await this.auth.login(this.identifier().trim(), this.password()));
+    });
+  }
+
+  /* ---------- e-mail code step ---------- */
+  protected verifyEmail = signal('');
+  protected resendIn = signal(0);
+  private newAccount = false;
+  private cooldownTimer?: ReturnType<typeof setInterval>;
+
+  /** Routes a sign-in reply to the right screen: e-mail code, 2FA, or into the app. */
+  private handleStep(r: SignInStep) {
+    if ('verificationRequired' in r) {
+      this.ticket.set(r.ticket);
+      this.verifyEmail.set(r.email);
+      this.code.set('');
+      this.startCooldown(r.resendIn);
+      this.svc.mode.set('verify');
+      return;
+    }
+    if ('twoFactorRequired' in r) {
+      this.ticket.set(r.ticket);
+      this.code.set('');
+      this.svc.mode.set('twofactor');
+      return;
+    }
+    if (this.newAccount) this.toast.success('Welcome to Y2 Markets! Your $10,000 demo account is ready.');
+    this.finish();
+  }
+
+  protected onCode(v: string) {
+    const digits = (v ?? '').replace(/\D/g, '').slice(0, 6);
+    this.code.set(digits);
+    if (digits.length === 6 && !this.busy()) void this.verifyEmailCode();
+  }
+
+  protected async verifyEmailCode() {
+    if (this.code().length !== 6) return this.error.set('Enter the 6-digit code from your e-mail');
+    await this.run(async () => {
+      const r = await this.auth.verifyCode(this.ticket(), this.code());
+      this.toast.success('E-mail verified ✓');
+      this.handleStep(r);
+    }).finally(() => this.error() && this.code.set(''));
+  }
+
+  protected async resendCode() {
+    if (this.resendIn() > 0) return;
+    await this.run(async () => {
+      const r = await this.auth.resendCode(this.ticket());
+      if ('ok' in r) {
+        this.code.set('');
+        this.startCooldown(r.resendIn);
+        this.toast.success(`A new code was sent to ${r.email}`);
         return;
       }
-      this.finish();
+      this.handleStep(r);
     });
+  }
+
+  private startCooldown(sec: number) {
+    clearInterval(this.cooldownTimer);
+    this.resendIn.set(Math.max(0, sec));
+    this.cooldownTimer = setInterval(() => {
+      this.resendIn.update((s) => Math.max(0, s - 1));
+      if (this.resendIn() === 0) clearInterval(this.cooldownTimer);
+    }, 1000);
   }
 
   protected async verify2fa() {

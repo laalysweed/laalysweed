@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, type Request, type Response } from 'express';
 import { z } from 'zod';
 import { Types } from 'mongoose';
 import { authenticator } from 'otplib';
@@ -6,9 +6,10 @@ import { ah, parse } from '../lib/http';
 import { authLimiter } from '../middleware/rate-limit';
 import { requireAuth, uid } from '../middleware/auth';
 import { User, UserT, publicUser, Session } from '../models/user';
-import { badRequest, conflict, unauthorized } from '../lib/errors';
+import { AppError, badRequest, conflict, unauthorized } from '../lib/errors';
 import { sha256 } from '../lib/crypto';
-import { signTwoFactorTicket, verifyTwoFactorTicket } from '../lib/jwt';
+import { signTwoFactorTicket, signVerifyTicket, verifyTwoFactorTicket, verifyVerifyTicket } from '../lib/jwt';
+import { mailCanSend } from '../lib/mailer';
 import { withTxn } from '../services/ledger.service';
 import { ChatMessage } from '../models/misc';
 import {
@@ -21,7 +22,11 @@ import {
   revokeCurrent,
   rotateSession,
   sendPasswordReset,
-  sendVerificationEmail,
+  CODE_RESEND_COOLDOWN_MS,
+  codeCooldown,
+  confirmVerificationCode,
+  maskEmail,
+  sendVerificationCode,
   verifyPassword,
 } from '../services/auth.service';
 
@@ -90,17 +95,45 @@ authRouter.post(
       referredBy = ref._id;
     }
     const user = await withTxn((s) => createUserWithAccounts(s, { fullName: b.fullName, username: b.username, email: b.email, password: b.password, referredBy }));
-    void sendVerificationEmail(user._id);
     void ChatMessage.create({
       conversationUserId: user._id,
       from: 'support',
       text: `Hi ${b.fullName.split(' ')[0]}! 👋 Welcome to Y2 Markets. We're here 24/7 if you need help with deposits, withdrawals or the platform.`,
     });
+    // E-mail a 6-digit code; the account opens only after it is entered.
+    // If no e-mail can be sent (e.g. free credits used up), sign the user straight in as before.
+    if (await sendVerificationCode(user._id)) return res.status(201).json(verificationStep(user));
     const u = user.toObject() as UserT;
     const accessToken = await issueSession(req, res, u);
     res.status(201).json({ accessToken, user: publicUser(u) });
   }),
 );
+
+/** Response telling the client to show the "enter your code" screen. */
+function verificationStep(u: Pick<UserT, '_id' | 'email' | 'emailCode'>) {
+  return {
+    verificationRequired: true as const,
+    ticket: signVerifyTicket(String(u._id)),
+    email: maskEmail(u.email),
+    resendIn: Math.ceil(CODE_RESEND_COOLDOWN_MS / 1000),
+  };
+}
+
+/** Last step of any sign-in: 2FA challenge if enabled, otherwise a session. */
+async function completeSignIn(req: Request, res: Response, user: UserT) {
+  if (user.twoFactor?.enabled) return res.json({ twoFactorRequired: true, ticket: signTwoFactorTicket(String(user._id)) });
+  await User.updateOne({ _id: user._id }, { $set: { lastLoginAt: new Date(), lastIp: req.ip } });
+  const accessToken = await issueSession(req, res, user);
+  return res.json({ accessToken, user: publicUser(user) });
+}
+
+const ticketUser = (ticket: string) => {
+  try {
+    return verifyVerifyTicket(ticket);
+  } catch {
+    throw unauthorized('This verification session has expired. Please sign in again.', 'TICKET_EXPIRED');
+  }
+};
 
 authRouter.post(
   '/login',
@@ -112,10 +145,44 @@ authRouter.post(
     const ok = await verifyPassword(b.password, user?.passwordHash ?? '$2b$12$invalidinvalidinvalidinvalidinvalidinvalidinvalidinva');
     if (!user || !ok) throw unauthorized('Incorrect e-mail/username or password', 'BAD_CREDENTIALS');
     if (user.blocked) throw unauthorized('This account has been suspended. Contact support.', 'BLOCKED');
-    if (user.twoFactor?.enabled) return res.json({ twoFactorRequired: true, ticket: signTwoFactorTicket(String(user._id)) });
-    await User.updateOne({ _id: user._id }, { $set: { lastLoginAt: new Date(), lastIp: req.ip } });
-    const accessToken = await issueSession(req, res, user);
-    res.json({ accessToken, user: publicUser(user) });
+    // Unverified players must enter an e-mail code first, but only while e-mail can actually be sent.
+    if (!user.emailVerified && user.role !== 'admin' && (await mailCanSend())) {
+      const live = user.emailCode?.expires && new Date(user.emailCode.expires).getTime() > Date.now() && (user.emailCode.attempts ?? 0) < 5;
+      if ((live && codeCooldown(user) > 0) || (await sendVerificationCode(user._id))) {
+        const fresh = await User.findById(user._id, { email: 1, emailCode: 1 }).lean<UserT>();
+        return res.json({ ...verificationStep(fresh!), resendIn: codeCooldown(fresh!) });
+      }
+    }
+    await completeSignIn(req, res, user);
+  }),
+);
+
+authRouter.post(
+  '/verify-code',
+  authLimiter,
+  ah(async (req, res) => {
+    const b = parse(z.object({ ticket: z.string(), code: z.string().trim().regex(/^\d{6}$/, 'Enter the 6-digit code') }), req.body);
+    const userId = ticketUser(b.ticket);
+    await confirmVerificationCode(userId, b.code);
+    const user = await User.findById(userId).lean<UserT>();
+    if (!user || user.blocked) throw unauthorized('Account unavailable', 'NO_SESSION');
+    await completeSignIn(req, res, user);
+  }),
+);
+
+authRouter.post(
+  '/resend-code',
+  authLimiter,
+  ah(async (req, res) => {
+    const b = parse(z.object({ ticket: z.string() }), req.body);
+    const user = await User.findById(ticketUser(b.ticket)).lean<UserT>();
+    if (!user || user.blocked) throw unauthorized('Account unavailable', 'NO_SESSION');
+    if (user.emailVerified) return completeSignIn(req, res, user);
+    const wait = codeCooldown(user);
+    if (wait > 0) return res.status(429).json({ error: { code: 'COOLDOWN', message: `Please wait ${wait}s before requesting another code.` }, resendIn: wait });
+    // E-mail unavailable (credits used up): don't lock the player out, let them in as before.
+    if (!(await sendVerificationCode(user._id))) return completeSignIn(req, res, user);
+    res.json({ ok: true, email: maskEmail(user.email), resendIn: Math.ceil(CODE_RESEND_COOLDOWN_MS / 1000) });
   }),
 );
 
@@ -213,8 +280,24 @@ authRouter.post(
   requireAuth,
   authLimiter,
   ah(async (req, res) => {
-    const u = await User.findById(uid(req), { emailVerified: 1 }).lean();
-    if (u && !u.emailVerified) await sendVerificationEmail(uid(req));
+    const u = await User.findById(uid(req), { emailVerified: 1, email: 1, emailCode: 1 }).lean<UserT>();
+    if (!u || u.emailVerified) return res.json({ ok: true, verified: true });
+    const wait = codeCooldown(u);
+    if (wait > 0) return res.json({ ok: true, sent: true, email: maskEmail(u.email), resendIn: wait });
+    const sent = await sendVerificationCode(uid(req));
+    if (!sent) throw new AppError(503, 'MAIL_UNAVAILABLE', 'E-mail is temporarily unavailable. Please try again later.');
+    res.json({ ok: true, sent: true, email: maskEmail(u.email), resendIn: Math.ceil(CODE_RESEND_COOLDOWN_MS / 1000) });
+  }),
+);
+
+/** Signed-in users (e.g. registered while e-mail was paused) confirm their address with a code. */
+authRouter.post(
+  '/verify-email-code',
+  requireAuth,
+  authLimiter,
+  ah(async (req, res) => {
+    const b = parse(z.object({ code: z.string().trim().regex(/^\d{6}$/, 'Enter the 6-digit code') }), req.body);
+    await confirmVerificationCode(uid(req), b.code);
     res.json({ ok: true });
   }),
 );

@@ -1,7 +1,7 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 
-export type AuthMode = 'signup' | 'login' | 'forgot' | 'reset' | 'twofactor';
+export type AuthMode = 'signup' | 'login' | 'forgot' | 'reset' | 'twofactor' | 'verify';
 
 /** Drives the right-hand auth drawer. Also reacts to ?auth=login|signup|reset, ?ref= and ?token= URLs. */
 @Injectable({ providedIn: 'root' })

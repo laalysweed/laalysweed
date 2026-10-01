@@ -4,6 +4,7 @@ import { inject } from '@angular/core';
 
 /** Inline stroke icon set (24×24, currentColor). Paths are static strings defined here, never user input. */
 const P: Record<string, string> = {
+  mail: '<rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="m3.5 7 8.5 6.5L20.5 7"/>',
   trading: '<ellipse cx="10" cy="6" rx="6" ry="2.5"/><path d="M4 6v4c0 1.4 2.7 2.5 6 2.5s6-1.1 6-2.5V6"/><path d="M4 10v4c0 1.4 2.7 2.5 6 2.5"/><path d="M4 14v4c0 1.4 2.7 2.5 6 2.5"/><circle cx="17" cy="16.5" r="4.5"/><path d="M17 14.3v4.4M15.6 15.2h2.1a.9.9 0 010 1.8h-1.4a.9.9 0 000 1.8h2.1"/>',
   finance: '<rect x="3" y="4" width="18" height="12" rx="2.5"/><path d="M3 8.5h18"/><path d="M12 21v-7M9 17l3-3 3 3"/>',
   profile: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="10" r="3.2"/><path d="M6.2 18.5c1.3-2.2 3.4-3.3 5.8-3.3s4.5 1.1 5.8 3.3"/>',

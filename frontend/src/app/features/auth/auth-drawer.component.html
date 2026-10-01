@@ -149,6 +149,42 @@
         </div>
       }
 
+      @case ('verify') {
+        <div class="pane in verify-pane">
+          <div class="pane-header">
+            <span class="mail-badge"><app-icon name="mail" [size]="30" /></span>
+            <h2 id="auth-title">Verify your e-mail</h2>
+            <p class="sub">We sent a 6-digit code to <b>{{ verifyEmail() }}</b>. Enter it below to activate your account.</p>
+          </div>
+          <form (ngSubmit)="verifyEmailCode()">
+            <div class="field">
+              <input
+                class="input code"
+                inputmode="numeric"
+                maxlength="6"
+                placeholder="••••••"
+                autocomplete="one-time-code"
+                aria-label="Verification code"
+                [ngModel]="code()"
+                (ngModelChange)="onCode($event)"
+                name="emailcode"
+              />
+            </div>
+            @if (error()) { <div class="alert">{{ error() }}</div> }
+            <button class="btn btn-brand block submit" type="submit" [disabled]="busy() || code().length !== 6">
+              @if (busy()) { <span class="spinner"></span> } @else { Verify &amp; continue }
+            </button>
+          </form>
+          <div class="resend-row">
+            <span class="muted">Didn't get it? Check your spam folder.</span>
+            <button type="button" class="link" (click)="resendCode()" [disabled]="busy() || resendIn() > 0">
+              @if (resendIn() > 0) { Resend in {{ resendIn() }}s } @else { Resend code }
+            </button>
+          </div>
+          <p class="auth-switch"><button type="button" class="link" (click)="svc.mode.set('login')">Back to log in</button></p>
+        </div>
+      }
+
       @case ('twofactor') {
         <div class="pane in">
           <div class="pane-header">

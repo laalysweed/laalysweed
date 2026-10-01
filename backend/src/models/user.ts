@@ -12,6 +12,12 @@ const userSchema = new Schema(
     emailVerified: { type: Boolean, default: false },
     emailVerifyTokenHash: { type: String, index: true, sparse: true },
     emailVerifyExpires: Date,
+    emailCode: {
+      hash: String,
+      expires: Date,
+      attempts: { type: Number, default: 0 },
+      sentAt: Date,
+    },
     resetTokenHash: { type: String, index: true, sparse: true },
     resetExpires: Date,
 

@@ -7,21 +7,25 @@ import { AuthService } from '../../core/auth.service';
 import { SocketService } from '../../core/socket.service';
 import { ToastService } from '../../core/toast.service';
 import { IconComponent } from '../../shared/icon.component';
+import { EmailVerifyInlineComponent } from '../../shared/email-verify-inline.component';
 import { ApiError, Withdrawal, WithdrawalPopupConfig } from '../../core/models';
 import { METHOD_LABELS, STATUS_LABELS, dateTime, money, statusTone } from '../../core/format';
 
 @Component({
   selector: 'app-withdrawal',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, IconComponent, RouterLink],
+  imports: [FormsModule, IconComponent, RouterLink, EmailVerifyInlineComponent],
   template: `
     <div class="fin-grid">
       <div class="main">
         @if (!auth.user()?.emailVerified) {
           <div class="gate card-solid anim-rise">
             <app-icon name="lock" [size]="28" />
-            <div><b>Verify your e-mail to withdraw</b><p class="muted">We sent a link to {{ auth.user()?.email }}. For your security, withdrawals are enabled once your e-mail is confirmed.</p></div>
-            <button class="btn btn-primary" (click)="resend()" [disabled]="sent()">{{ sent() ? 'Link sent' : 'Resend link' }}</button>
+            <div>
+              <b>Verify your e-mail to withdraw</b>
+              <p class="muted">For your security, withdrawals are enabled once {{ auth.user()?.email }} is confirmed with a 6-digit code.</p>
+              <app-email-verify-inline />
+            </div>
           </div>
         }
         <div class="card-solid anim-rise">
@@ -235,12 +239,6 @@ export class WithdrawalComponent {
 
   protected async cancel(w: Withdrawal) {
     await this.api.post(`/finance/withdrawals/${w.id}/cancel`).catch((e: ApiError) => this.toast.error(e.message));
-  }
-
-  protected async resend() {
-    await this.api.post('/auth/resend-verification');
-    this.sent.set(true);
-    this.toast.info('Verification e-mail sent');
   }
 }
 

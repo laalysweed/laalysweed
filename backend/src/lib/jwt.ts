@@ -20,6 +20,16 @@ export const verifyAccess = (token: string) =>
 export const signTwoFactorTicket = (userId: string) =>
   jwt.sign({ sub: userId, purpose: '2fa' }, env.JWT_REFRESH_SECRET, { expiresIn: 300, issuer: 'y2markets' });
 
+/** Ticket proving the password step passed while the user still has to enter their e-mail code. */
+export const signVerifyTicket = (userId: string) =>
+  jwt.sign({ sub: userId, purpose: 'verify' }, env.JWT_REFRESH_SECRET, { expiresIn: 3600, issuer: 'y2markets' });
+
+export function verifyVerifyTicket(ticket: string): string {
+  const p = jwt.verify(ticket, env.JWT_REFRESH_SECRET, { issuer: 'y2markets' }) as jwt.JwtPayload;
+  if (p['purpose'] !== 'verify' || !p.sub) throw new Error('bad ticket');
+  return p.sub;
+}
+
 export function verifyTwoFactorTicket(ticket: string): string {
   const p = jwt.verify(ticket, env.JWT_REFRESH_SECRET, { issuer: 'y2markets' }) as jwt.JwtPayload;
   if (p['purpose'] !== '2fa' || !p.sub) throw new Error('bad ticket');

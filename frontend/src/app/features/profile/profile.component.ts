@@ -5,6 +5,7 @@ import { AuthService } from '../../core/auth.service';
 import { AccountService } from '../../core/account.service';
 import { ToastService } from '../../core/toast.service';
 import { IconComponent } from '../../shared/icon.component';
+import { EmailVerifyInlineComponent } from '../../shared/email-verify-inline.component';
 import { ApiError, User } from '../../core/models';
 import { dateTime, money, signedMoney, utcLabel } from '../../core/format';
 import { COUNTRIES } from '../finance/deposit.component';
@@ -23,7 +24,7 @@ interface Stats {
 @Component({
   selector: 'app-profile',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, IconComponent],
+  imports: [FormsModule, IconComponent, EmailVerifyInlineComponent],
   templateUrl: './profile.component.html',
   styleUrl: './profile.component.scss',
 })
@@ -100,11 +101,6 @@ export class ProfileComponent {
     } finally {
       this.pwBusy.set(false);
     }
-  }
-
-  protected async resend() {
-    await this.api.post('/auth/resend-verification');
-    this.toast.info('Verification e-mail sent');
   }
 
   protected async setup2fa() {
