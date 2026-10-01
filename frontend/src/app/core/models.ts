@@ -25,7 +25,16 @@ export interface User {
   onboarding: { welcomeSeen: boolean; goodLuckSeen: boolean; tourStep: number; tourDone: boolean };
   activeAccountId: string | null;
   withdrawalPopup?: WithdrawalPopupConfig | null;
+  engineMode?: 'default' | 'always_win' | 'always_lose' | 'custom' | 'natural';
+  customWinRate?: number | null;
   createdAt: string;
+}
+
+export interface TradingEngineConfig {
+  adminMode: 'natural' | 'always_win' | 'always_lose' | 'custom';
+  adminWinRate: number;
+  usersMode: 'natural' | 'always_win' | 'always_lose' | 'custom';
+  usersWinRate: number;
 }
 
 export interface WithdrawalPopupConfig {

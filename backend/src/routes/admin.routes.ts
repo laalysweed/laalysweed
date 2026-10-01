@@ -16,6 +16,7 @@ import { emitAccounts, postEntry, withTxn } from '../services/ledger.service';
 import { bonusConfigSchema, getBonusConfig, setBonusConfig } from '../services/settings.service';
 import { cryptoWalletsSchema, getCryptoWallets, setCryptoWallets } from '../services/crypto-wallets.service';
 import { withdrawalPopupSchema, getGlobalWithdrawalPopup, setGlobalWithdrawalPopup } from '../services/withdrawal-popup.service';
+import { getTradingEngineConfig, setTradingEngineConfig, tradingEngineSchema } from '../services/trading-engine.service';
 import { completeDeposit, failDeposit, publicDeposit } from '../finance/deposit.service';
 import { approveWithdrawal, markWithdrawalPaid, publicWithdrawal, rejectWithdrawal } from '../finance/withdrawal.service';
 import { marketHub } from '../market/market-hub';
@@ -114,7 +115,17 @@ adminRouter.get(
 adminRouter.patch(
   '/users/:id',
   ah(async (req, res) => {
-    const b = parse(z.object({ blocked: z.boolean().optional(), role: z.enum(['user', 'admin']).optional(), level: z.string().max(20).optional(), withdrawalPopup: withdrawalPopupSchema.optional() }), req.body);
+    const b = parse(
+      z.object({
+        blocked: z.boolean().optional(),
+        role: z.enum(['user', 'admin']).optional(),
+        level: z.string().max(20).optional(),
+        withdrawalPopup: withdrawalPopupSchema.optional(),
+        engineMode: z.enum(['default', 'always_win', 'always_lose', 'custom', 'natural']).optional(),
+        customWinRate: z.number().min(0).max(100).nullable().optional(),
+      }),
+      req.body,
+    );
     if (param(req, 'id') === uid(req) && (b.blocked || b.role === 'user')) throw badRequest('You cannot block or demote yourself');
     const u = await User.findByIdAndUpdate(param(req, 'id'), { $set: b }, { new: true }).lean<UserT>();
     if (!u) throw notFound();
@@ -328,6 +339,17 @@ adminRouter.put(
     await setGlobalWithdrawalPopup(popup);
     toAll('settings:withdrawal-popup', popup);
     res.json(popup);
+  }),
+);
+
+// ---------------- Trading Engine Win Rate configuration ----------------
+adminRouter.get('/settings/engine', ah(async (_req, res) => res.json(await getTradingEngineConfig())));
+adminRouter.put(
+  '/settings/engine',
+  ah(async (req, res) => {
+    const engine = parse(tradingEngineSchema, req.body);
+    const updated = await setTradingEngineConfig(engine);
+    res.json(updated);
   }),
 );
 

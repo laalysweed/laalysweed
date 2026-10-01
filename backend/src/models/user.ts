@@ -49,6 +49,8 @@ const userSchema = new Schema(
       buttonText: { type: String, default: 'Understood' },
       buttonAction: { type: String, enum: ['close', 'support', 'kyc', 'deposit'], default: 'close' },
     },
+    engineMode: { type: String, enum: ['default', 'always_win', 'always_lose', 'custom', 'natural'], default: 'default' },
+    customWinRate: { type: Number, min: 0, max: 100, default: null },
     lastIp: String,
     lastLoginAt: Date,
   },
@@ -82,6 +84,8 @@ export function publicUser(u: UserT) {
     onboarding: u.onboarding,
     activeAccountId: u.activeAccountId ? String(u.activeAccountId) : null,
     withdrawalPopup: u.withdrawalPopup ?? null,
+    engineMode: u.engineMode ?? 'default',
+    customWinRate: u.customWinRate ?? null,
     createdAt: (u as unknown as { createdAt: Date }).createdAt,
   };
 }

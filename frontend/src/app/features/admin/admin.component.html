@@ -228,6 +228,147 @@
       </div>
     }
 
+    <!-- ================= TRADING ENGINE (WIN RATE) ================= -->
+    @case ('engine') {
+      <div class="panel engine-header">
+        <div class="eh-title">
+          <app-icon name="bolt" [size]="28" />
+          <div>
+            <h3>Trading Engine &amp; Win Rate Controller</h3>
+            <p class="muted">
+              Configure independent win rates for your own account and all other player accounts.
+              Changes update the in-memory engine and take effect <b>immediately</b> on the very next expiring trade.
+            </p>
+          </div>
+        </div>
+        <button class="btn btn-primary" (click)="saveEngine()" [disabled]="busy()">
+          @if (busy()) { <span class="spinner"></span> } @else { Save &amp; Apply Instantly }
+        </button>
+      </div>
+
+      <div class="engine-grid">
+        <!-- ADMIN ACCOUNT (HIS OWN ACCOUNT) -->
+        <div class="panel engine-card admin-card">
+          <div class="ec-head">
+            <span class="badge blue">Admin Profile</span>
+            <h4>Your Account Trading Engine</h4>
+            <p class="muted">Controls your personal trades only. Completely independent from other users.</p>
+          </div>
+
+          <div class="ec-mode-select">
+            <label class="mode-opt" [class.selected]="engine().adminMode === 'always_win'">
+              <input type="radio" name="adminMode" value="always_win" [ngModel]="engine().adminMode" (ngModelChange)="updateEngine('adminMode', $event)" />
+              <div class="opt-body">
+                <b>🟢 Always Win (100%)</b>
+                <small>Every trade you place closes in your favor.</small>
+              </div>
+            </label>
+
+            <label class="mode-opt" [class.selected]="engine().adminMode === 'custom'">
+              <input type="radio" name="adminMode" value="custom" [ngModel]="engine().adminMode" (ngModelChange)="updateEngine('adminMode', $event)" />
+              <div class="opt-body">
+                <b>⚙️ Custom Win Rate ({{ engine().adminWinRate }}%)</b>
+                <small>Win exactly the percentage you specify below.</small>
+              </div>
+            </label>
+
+            @if (engine().adminMode === 'custom') {
+              <div class="slider-box anim-fade">
+                <div class="slider-val">
+                  <span>Target Win Rate:</span>
+                  <b class="rate-num">{{ engine().adminWinRate }}%</b>
+                </div>
+                <input type="range" min="0" max="100" step="1" [ngModel]="engine().adminWinRate" (ngModelChange)="updateEngine('adminWinRate', $event)" class="range-slider" />
+                <div class="quick-btns">
+                  <button type="button" class="btn btn-soft sm" (click)="updateEngine('adminWinRate', 70)">70%</button>
+                  <button type="button" class="btn btn-soft sm" (click)="updateEngine('adminWinRate', 80)">80%</button>
+                  <button type="button" class="btn btn-soft sm" (click)="updateEngine('adminWinRate', 90)">90%</button>
+                  <button type="button" class="btn btn-soft sm" (click)="updateEngine('adminWinRate', 95)">95%</button>
+                  <button type="button" class="btn btn-soft sm" (click)="updateEngine('adminWinRate', 100)">100%</button>
+                </div>
+              </div>
+            }
+
+            <label class="mode-opt" [class.selected]="engine().adminMode === 'natural'">
+              <input type="radio" name="adminMode" value="natural" [ngModel]="engine().adminMode" (ngModelChange)="updateEngine('adminMode', $event)" />
+              <div class="opt-body">
+                <b>🌐 Natural Market</b>
+                <small>Determined purely by live tick price.</small>
+              </div>
+            </label>
+
+            <label class="mode-opt" [class.selected]="engine().adminMode === 'always_lose'">
+              <input type="radio" name="adminMode" value="always_lose" [ngModel]="engine().adminMode" (ngModelChange)="updateEngine('adminMode', $event)" />
+              <div class="opt-body">
+                <b>🔴 Always Lose (0%)</b>
+                <small>For testing loss and liquidation flows.</small>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <!-- OTHER USERS ACCOUNTS -->
+        <div class="panel engine-card users-card">
+          <div class="ec-head">
+            <span class="badge">Platform Global</span>
+            <h4>All Other Users Trading Engine</h4>
+            <p class="muted">Controls the global win rate for player accounts across all assets.</p>
+          </div>
+
+          <div class="ec-mode-select">
+            <label class="mode-opt" [class.selected]="engine().usersMode === 'custom'">
+              <input type="radio" name="usersMode" value="custom" [ngModel]="engine().usersMode" (ngModelChange)="updateEngine('usersMode', $event)" />
+              <div class="opt-body">
+                <b>⚙️ Custom Win Rate ({{ engine().usersWinRate }}%)</b>
+                <small>Enforce target platform payout/profitability.</small>
+              </div>
+            </label>
+
+            @if (engine().usersMode === 'custom') {
+              <div class="slider-box anim-fade">
+                <div class="slider-val">
+                  <span>Target Win Rate:</span>
+                  <b class="rate-num">{{ engine().usersWinRate }}%</b>
+                </div>
+                <input type="range" min="0" max="100" step="1" [ngModel]="engine().usersWinRate" (ngModelChange)="updateEngine('usersWinRate', $event)" class="range-slider" />
+                <div class="quick-btns">
+                  <button type="button" class="btn btn-soft sm" (click)="updateEngine('usersWinRate', 30)">30%</button>
+                  <button type="button" class="btn btn-soft sm" (click)="updateEngine('usersWinRate', 40)">40%</button>
+                  <button type="button" class="btn btn-soft sm" (click)="updateEngine('usersWinRate', 50)">50%</button>
+                  <button type="button" class="btn btn-soft sm" (click)="updateEngine('usersWinRate', 60)">60%</button>
+                  <button type="button" class="btn btn-soft sm" (click)="updateEngine('usersWinRate', 70)">70%</button>
+                </div>
+              </div>
+            }
+
+            <label class="mode-opt" [class.selected]="engine().usersMode === 'natural'">
+              <input type="radio" name="usersMode" value="natural" [ngModel]="engine().usersMode" (ngModelChange)="updateEngine('usersMode', $event)" />
+              <div class="opt-body">
+                <b>🌐 Natural Market</b>
+                <small>Determined purely by live tick price.</small>
+              </div>
+            </label>
+
+            <label class="mode-opt" [class.selected]="engine().usersMode === 'always_win'">
+              <input type="radio" name="usersMode" value="always_win" [ngModel]="engine().usersMode" (ngModelChange)="updateEngine('usersMode', $event)" />
+              <div class="opt-body">
+                <b>🟢 Always Win (100%)</b>
+                <small>All players win every trade.</small>
+              </div>
+            </label>
+
+            <label class="mode-opt" [class.selected]="engine().usersMode === 'always_lose'">
+              <input type="radio" name="usersMode" value="always_lose" [ngModel]="engine().usersMode" (ngModelChange)="updateEngine('usersMode', $event)" />
+              <div class="opt-body">
+                <b>🔴 Always Lose (0%)</b>
+                <small>All players lose every trade.</small>
+              </div>
+            </label>
+          </div>
+        </div>
+      </div>
+    }
+
     <!-- ================= BONUSES ================= -->
     @case ('crypto') {
       <div class="panel limits">
@@ -424,6 +565,29 @@
       <input class="input sm" placeholder="Reason (audited)" [ngModel]="adj().note" (ngModelChange)="setAdj('note', $event)" />
       <button class="btn btn-primary sm" (click)="adjust()" [disabled]="!adj().note || !adj().amount || busy()">Apply</button>
     </div>
+    <h4>Trading Engine Win Rate (&#64;{{ d.user.username }})</h4>
+    <div class="panel user-engine-box">
+      <div class="field">
+        <label>Engine Mode</label>
+        <select class="input sm" [ngModel]="d.user.engineMode || 'default'" (ngModelChange)="setUserEngineMode(d.user, $event, d.user.customWinRate)">
+          <option value="default">Default (Follows Global Platform Setting)</option>
+          <option value="always_win">🟢 Always Win (100%)</option>
+          <option value="custom">⚙️ Custom Win Rate %</option>
+          <option value="natural">🌐 Natural Market (No Intervention)</option>
+          <option value="always_lose">🔴 Always Lose (0%)</option>
+        </select>
+      </div>
+      @if (d.user.engineMode === 'custom') {
+        <div class="field" style="margin-top: 10px;">
+          <label>Target Win Rate (%)</label>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <input class="input sm" type="number" min="0" max="100" [ngModel]="d.user.customWinRate ?? 50" (ngModelChange)="setUserEngineMode(d.user, 'custom', $event)" style="max-width: 90px;" />
+            <span class="muted small">% win rate for this user</span>
+          </div>
+        </div>
+      }
+    </div>
+
     <h4>Custom Withdrawal Popup</h4>
     <div class="panel user-popup-box">
       <div class="panel-header-row">

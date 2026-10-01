@@ -1014,3 +1014,187 @@ main {
     }
   }
 }
+
+/* ================= TRADING ENGINE WIN RATE CONTROLLER ================= */
+.engine-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+  padding: 18px 22px;
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.9) 100%);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+
+  .eh-title {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    app-icon {
+      color: #38bdf8;
+      margin-top: 2px;
+    }
+    h3 {
+      font-size: 18px;
+      margin: 0 0 4px;
+      color: #f1f5f9;
+    }
+    p {
+      margin: 0;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+  }
+
+  @include m.down(t.$bp-md) {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+.engine-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  @include m.down(t.$bp-md) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.engine-card {
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  border-radius: 14px;
+
+  &.admin-card {
+    border-top: 4px solid #38bdf8;
+    background: rgba(15, 23, 42, 0.6);
+  }
+
+  &.users-card {
+    border-top: 4px solid #a855f7;
+    background: rgba(15, 23, 42, 0.6);
+  }
+
+  .ec-head {
+    h4 {
+      font-size: 17px;
+      margin: 8px 0 4px;
+      color: #f8fafc;
+    }
+    p {
+      margin: 0;
+      font-size: 13px;
+    }
+  }
+
+  .ec-mode-select {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .mode-opt {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.02);
+    cursor: pointer;
+    transition: all 0.15s ease;
+
+    input[type='radio'] {
+      margin-top: 3px;
+      cursor: pointer;
+    }
+
+    .opt-body {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      b {
+        font-size: 14.5px;
+        color: #f1f5f9;
+      }
+      small {
+        font-size: 12px;
+        color: var(--muted);
+      }
+    }
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: rgba(255, 255, 255, 0.15);
+    }
+
+    &.selected {
+      background: rgba(59, 130, 246, 0.12);
+      border-color: rgba(59, 130, 246, 0.4);
+    }
+  }
+
+  .slider-box {
+    margin: 4px 0 8px 30px;
+    padding: 14px 16px;
+    border-radius: 10px;
+    background: rgba(0, 0, 0, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+
+    .slider-val {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+      font-size: 13.5px;
+      .rate-num {
+        font-size: 18px;
+        color: #38bdf8;
+      }
+    }
+
+    .range-slider {
+      width: 100%;
+      height: 6px;
+      border-radius: 3px;
+      outline: none;
+      accent-color: #38bdf8;
+      cursor: pointer;
+      margin-bottom: 12px;
+    }
+
+    .quick-btns {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      button {
+        flex: 1;
+        min-width: 44px;
+        font-size: 12px;
+        padding: 4px 6px;
+      }
+    }
+  }
+}
+
+.user-engine-box {
+  padding: 14px;
+  margin-bottom: 14px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    label {
+      font-size: 12px;
+      color: var(--muted);
+      font-weight: 500;
+    }
+  }
+}

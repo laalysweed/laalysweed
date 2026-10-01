@@ -11,10 +11,10 @@ import { LogoComponent } from '../../shared/logo.component';
 import { IconComponent } from '../../shared/icon.component';
 import { StackTableDirective } from '../../shared/stack-table.directive';
 import { AuditChartComponent } from './audit-chart.component';
-import { Account, ApiError, ChatMsg, Deposit, Trade, Tournament, User, Withdrawal, WithdrawalPopupConfig } from '../../core/models';
+import { Account, ApiError, ChatMsg, Deposit, Trade, Tournament, User, Withdrawal, WithdrawalPopupConfig, TradingEngineConfig } from '../../core/models';
 import { METHOD_LABELS, STATUS_LABELS, dateTime, money, price, signedMoney, statusTone } from '../../core/format';
 
-type Tab = 'dashboard' | 'users' | 'kyc' | 'deposits' | 'withdrawals' | 'crypto' | 'assets' | 'bonuses' | 'ledger' | 'trades' | 'chat' | 'tournaments';
+type Tab = 'dashboard' | 'users' | 'kyc' | 'deposits' | 'withdrawals' | 'crypto' | 'assets' | 'engine' | 'bonuses' | 'ledger' | 'trades' | 'chat' | 'tournaments';
 
 interface AdminUser extends User {
   blocked: boolean;
@@ -112,6 +112,7 @@ export class AdminComponent {
     { id: 'deposits', label: 'Deposits', icon: 'deposit' },
     { id: 'withdrawals', label: 'Withdrawals', icon: 'withdraw' },
     { id: 'assets', label: 'Assets & payouts', icon: 'chart-candle' },
+    { id: 'engine', label: 'Trading Engine', icon: 'bolt' },
     { id: 'crypto', label: 'Payments & limits', icon: 'wallet' },
     { id: 'bonuses', label: 'Bonus config', icon: 'gift' },
     { id: 'ledger', label: 'Ledger', icon: 'book' },
@@ -217,6 +218,7 @@ export class AdminComponent {
         if (this.tab() === 'chat') void this.loadConvos();
         else this.toast.info('New support message');
       }),
+      this.socket.on<TradingEngineConfig>('settings:engine', (e) => this.engine.set(e)),
     ];
     inject(DestroyRef).onDestroy(() => offs.forEach((o) => o()));
   }
@@ -255,6 +257,9 @@ export class AdminComponent {
         }
         case 'assets':
           this.assets.set(await this.api.get('/admin/assets'));
+          break;
+        case 'engine':
+          await this.loadEngine();
           break;
         case 'crypto': {
           const [w, l] = await Promise.all([this.api.get<CryptoWalletRow[]>('/admin/settings/crypto'), this.api.get<{ minDeposit: number; maxDeposit: number; minWithdrawal: number }>('/admin/settings/limits')]);
@@ -337,6 +342,48 @@ export class AdminComponent {
 
   protected updateUserPopup<K extends keyof WithdrawalPopupConfig>(k: K, v: WithdrawalPopupConfig[K]) {
     this.userPopup.update((p) => ({ ...p, [k]: v }));
+  }
+
+  // ---------------- Trading Engine Win Rate ----------------
+  protected engine = signal<TradingEngineConfig>({
+    adminMode: 'always_win',
+    adminWinRate: 100,
+    usersMode: 'natural',
+    usersWinRate: 50,
+  });
+
+  protected async loadEngine() {
+    try {
+      const e = await this.api.get<TradingEngineConfig>('/admin/settings/engine');
+      if (e) this.engine.set(e);
+    } catch (err: unknown) {
+      this.toast.error((err as ApiError)?.message ?? 'Failed to load trading engine config');
+    }
+  }
+
+  protected async saveEngine() {
+    this.busy.set(true);
+    try {
+      const updated = await this.api.put<TradingEngineConfig>('/admin/settings/engine', this.engine());
+      this.engine.set(updated);
+      this.toast.success('Trading engine updated! Takes effect immediately.');
+    } catch (err: unknown) {
+      this.toast.error((err as ApiError)?.message ?? 'Failed to save trading engine config');
+    } finally {
+      this.busy.set(false);
+    }
+  }
+
+  protected updateEngine<K extends keyof TradingEngineConfig>(k: K, v: TradingEngineConfig[K]) {
+    this.engine.update((e) => ({ ...e, [k]: v }));
+  }
+
+  protected async setUserEngineMode(u: AdminUser, mode: 'default' | 'always_win' | 'always_lose' | 'custom' | 'natural', customWinRate?: number | null) {
+    await this.act(() => this.api.patch(`/admin/users/${u.id}`, { engineMode: mode, customWinRate: customWinRate ?? null }), `Trading engine for ${u.username} updated`);
+    if (this.detail()?.user.id === u.id) {
+      await this.openUser(u.id);
+    }
+    await this.searchUsers();
   }
   protected async patchUser(id: string, body: Record<string, unknown>) {
     await this.act(() => this.api.patch(`/admin/users/${id}`, body), 'User updated');

