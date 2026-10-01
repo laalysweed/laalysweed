@@ -1,0 +1,32 @@
+services:
+  - type: web
+    name: y2trades-backend
+    runtime: node
+    plan: starter
+    rootDir: backend
+    buildCommand: npm install --include=dev && npm run build
+    startCommand: npm run start:prod
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: APP_URL
+        sync: false
+      - key: API_PUBLIC_URL
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false
+      - key: MONGO_URI
+        sync: false
+      - key: JWT_ACCESS_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: OTC_SEED
+        generateValue: true
+      - key: BINANCE_ENABLED
+        value: "true"
+      - key: MPESA_ENV
+        value: sandbox

@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Y2 Markets: Where Ambition Meets Opportunity</title>
+    <base href="/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#0F1420" />
+    <meta name="description" content="Trade crypto, currencies, commodities, stocks and indices on Y2 Markets. Fast execution, transparent pricing, M-Pesa deposits." />
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <!-- Production Render backend URL hook (set to your Render service URL when hosting on Cloudflare Pages, e.g. 'https://y2trades-api.onrender.com') -->
+    <script>
+      window.__API_URL__ = window.__API_URL__ || '';
+    </script>
+  </head>
+  <body>
+    <!-- Shown until Angular boots and the session is restored; faded out by the App component. -->
+    <div id="boot-loader" aria-label="Loading Y2 Markets" role="status">
+      <div class="y2-loader">
+        <div class="y2-candles">
+          <span class="red" style="--i: 0; --o: -4px; --h: 30px"><b></b></span>
+          <span class="red dim" style="--i: 1; --o: 4px; --h: 34px"><b></b></span>
+          <span class="green dim" style="--i: 2; --o: 14px; --h: 18px"><b></b></span>
+          <span class="green" style="--i: 3; --o: 0px; --h: 40px"><b></b></span>
+          <span class="green bright" style="--i: 4; --o: -12px; --h: 36px"><b></b></span>
+        </div>
+        <div class="y2-word">Y2 MARKETS</div>
+      </div>
+    </div>
+    <app-root></app-root>
+  </body>
+</html>

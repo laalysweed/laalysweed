@@ -1,0 +1,80 @@
+@switch (stage()) {
+  @case ('welcome') {
+    <div class="overlay anim-fade">
+      <div class="welcome anim-pop" role="dialog" aria-modal="true" aria-labelledby="wl-title">
+        <div class="globe-wrap">
+          <div class="globe"><div class="globe-map"></div><div class="globe-shade"></div></div>
+          <div class="orbit"></div>
+        </div>
+        <app-logo [size]="52" />
+        <h2 id="wl-title">Hello and welcome to Y2 Markets!</h2>
+        <p>Hi {{ firstName() }}, we're glad you're here. Your free <b>$10,000 demo account</b> is ready, so practise risk-free, then switch to real trading whenever you like.</p>
+        <button class="btn btn-buy lg block" (click)="continueWelcome()">Continue</button>
+      </div>
+    </div>
+  }
+
+  @case ('goodluck') {
+    <div class="overlay anim-fade">
+      <div class="goodluck anim-pop" role="dialog" aria-modal="true">
+        <button class="close icon-btn" (click)="goodLuck('trade')" aria-label="Close"><app-icon name="close" [size]="18" /></button>
+        <h2>Good luck with your trading!</h2>
+        <p class="muted">How would you like to begin?</p>
+        <div class="cards stagger">
+          <button class="gl-card" (click)="goodLuck('deposit')">
+            <span class="gl-ico green"><app-icon name="wallet" [size]="30" /></span>
+            <b>Deposit</b><small>Fund your real account with M-Pesa, USDT or card</small>
+          </button>
+          <button class="gl-card" (click)="goodLuck('tutorial')">
+            <span class="gl-ico blue"><app-icon name="play" [size]="30" /></span>
+            <b>Tutorial</b><small>A 1-minute guided tour of the terminal</small>
+          </button>
+          <button class="gl-card" (click)="goodLuck('trade')">
+            <span class="gl-ico teal"><app-icon name="chart-line" [size]="30" /></span>
+            <b>Start trading</b><small>Jump straight in with your demo account</small>
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  @case ('tour-intro') {
+    <div class="overlay light anim-fade">
+      <div class="intro anim-pop">
+        <span class="gl-ico blue"><app-icon name="book" [size]="28" /></span>
+        <h3>Take a quick tour?</h3>
+        <p class="muted">We'll highlight the key parts of the terminal: choosing an asset, setting your trade and placing it.</p>
+        <div class="row">
+          <button class="btn btn-ghost" (click)="skip()">Skip Guide</button>
+          <button class="btn btn-primary" (click)="startTour()">Start Tour</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  @case ('tour') {
+    <div class="tour-blocker" (click)="$event.stopPropagation()"></div>
+    @if (spot.rect(); as r) {
+      <div class="hole" [style.left.px]="r.left - 8" [style.top.px]="r.top - 8" [style.width.px]="r.width + 16" [style.height.px]="r.height + 16"></div>
+    }
+    @if (step(); as s) {
+      <div class="pop" [attr.data-arrow]="pop().arrow" [style.left.px]="pop().left" [style.top.px]="pop().top" [style.width.px]="pop().w">
+        <div class="pop-head">
+          <span class="count">{{ stepIndex() + 1 }} / {{ steps().length }}</span>
+          <button class="skip" (click)="endTour()">Skip Guide</button>
+        </div>
+        <h4>{{ s.title }}</h4>
+        <p>{{ s.text }}</p>
+        <div class="dots">
+          @for (x of steps(); track x.key; let i = $index) {
+            <i [class.on]="i === stepIndex()"></i>
+          }
+        </div>
+        <div class="row">
+          <button class="btn btn-soft sm" (click)="prev()" [disabled]="stepIndex() === 0">Back</button>
+          <button class="btn btn-primary sm" (click)="next()">{{ stepIndex() === steps().length - 1 ? 'Finish' : 'Next' }}</button>
+        </div>
+      </div>
+    }
+  }
+}

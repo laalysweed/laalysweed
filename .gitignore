@@ -1,0 +1,37 @@
+# Dependencies
+node_modules/
+*/node_modules/
+
+# Production builds
+dist/
+*/dist/
+.angular/
+*/.angular/
+
+# Environment files and credentials (keep .env.example only)
+.env
+.env.*
+*.env
+*.env.*
+!*.env.example
+!.env.example
+
+# Local databases and uploads
+.data/
+backend/.data/
+uploads/
+backend/uploads/
+
+# Logs and coverage
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+coverage/
+*/coverage/
+
+# OS and Editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

@@ -1,0 +1,233 @@
+@use 'mixins' as m;
+
+:host {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.title {
+  text-align: center;
+  font-family: var(--font-ui);
+  font-weight: 600;
+  font-size: 20px;
+  padding: 22px 0 18px;
+  letter-spacing: 0;
+}
+
+.tabs2 {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  button {
+    height: 62px;
+    background: none;
+    border: 0;
+    font-size: 19px;
+    color: #8e97aa;
+    @include m.transition(color);
+    &.on {
+      color: #fff;
+    }
+  }
+  .cnt {
+    display: inline-grid;
+    place-items: center;
+    min-width: 22px;
+    height: 22px;
+    padding: 0 6px;
+    margin-left: 6px;
+    border-radius: 11px;
+    background: var(--primary);
+    font-size: 12px;
+    font-weight: 700;
+    vertical-align: 2px;
+  }
+  .ink {
+    position: absolute;
+    left: 0;
+    bottom: -1px;
+    width: 50%;
+    height: 3px;
+    border-radius: 3px;
+    background: var(--primary);
+    box-shadow: 0 0 10px rgba(47, 128, 237, 0.7);
+    transition: transform 320ms var(--ease);
+    &.right {
+      transform: translateX(100%);
+    }
+  }
+}
+
+.list {
+  flex: 1;
+  min-height: 0;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+  @include m.scrollbar;
+  &.scroll {
+    display: block;
+    position: relative;
+  }
+}
+.spacer {
+  position: relative;
+}
+.win {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 68px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(17, 22, 34, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  cursor: pointer;
+  animation: rise-in 300ms var(--ease);
+  @include m.transition(background, border-color, transform, box-shadow);
+  &:hover {
+    background: rgba(26, 32, 48, 0.95);
+    border-color: rgba(255, 255, 255, 0.1);
+  }
+  &.won {
+    background: rgba(34, 197, 94, 0.18);
+    border-color: rgba(34, 197, 94, 0.6);
+    box-shadow: 0 0 28px rgba(34, 197, 94, 0.35);
+    animation: flash-card 1.4s var(--ease);
+  }
+  &.lost {
+    background: rgba(239, 68, 68, 0.15);
+    border-color: rgba(239, 68, 68, 0.5);
+    animation: flash-card 1.4s var(--ease);
+  }
+  &.draw {
+    background: rgba(148, 163, 184, 0.14);
+  }
+  &.closed {
+    min-height: 0;
+    animation: none;
+  }
+}
+@keyframes flash-card {
+  0% {
+    transform: scale(1);
+  }
+  15% {
+    transform: scale(1.03);
+  }
+  30% {
+    transform: scale(1);
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+}
+.result {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 18px;
+  b {
+    letter-spacing: 0.08em;
+  }
+}
+.mid {
+  flex: 1;
+  min-width: 0;
+  .n {
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+.sub {
+  font-size: 12px;
+  color: var(--muted);
+}
+.dir {
+  color: var(--sell);
+  font-size: 11px;
+  &.up {
+    color: var(--buy);
+  }
+}
+.amt {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  span {
+    font-size: 12.5px;
+    font-weight: 600;
+  }
+}
+.badge-r {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  font-weight: 800;
+  background: rgba(148, 163, 184, 0.16);
+  color: #cbd5e1;
+  &.won {
+    background: rgba(34, 197, 94, 0.16);
+    color: #4ade80;
+  }
+  &.lost {
+    background: rgba(239, 68, 68, 0.14);
+    color: #f87171;
+  }
+}
+
+.empty-state {
+  margin: auto;
+  padding: 40px 20px;
+  text-align: center;
+  color: #8e97aa;
+  p {
+    font-size: 20px;
+    margin: 0 0 6px;
+  }
+  small {
+    color: #5b6477;
+  }
+  .ghost {
+    width: 64px;
+    height: 64px;
+    margin: 0 auto 14px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.04);
+    color: #5b6477;
+  }
+}
+.more {
+  display: grid;
+  place-items: center;
+  padding: 12px;
+}

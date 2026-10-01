@@ -1,0 +1,220 @@
+<div class="backdrop" (click)="svc.close()"></div>
+
+<aside class="drawer" role="dialog" aria-modal="true" [attr.aria-hidden]="!svc.open()" aria-labelledby="auth-title">
+  <div class="drawer-header">
+    <div class="drawer-brand">
+      <app-logo [size]="34" />
+    </div>
+    <button class="close-btn" (click)="svc.close()" aria-label="Close">
+      <app-icon name="close" [size]="18" />
+    </button>
+  </div>
+
+  <div class="drawer-body">
+    @switch (svc.mode()) {
+      @case ('signup') {
+        <div class="pane" [class.in]="svc.open()">
+          <div class="pane-header">
+            <h2 id="auth-title">Create your account</h2>
+            <p class="sub">Start trading global markets in minutes.</p>
+          </div>
+
+          <form (ngSubmit)="signup()" novalidate>
+            <div class="field-row">
+              <div class="field">
+                <label for="fn">Full Name</label>
+                <input id="fn" class="input" [class.invalid]="touched()['name'] && !nameValid()" placeholder="Full Name" autocomplete="name"
+                  [ngModel]="fullName()" (ngModelChange)="fullName.set($event)" name="fullName" (blur)="touch('name')" />
+                @if (touched()['name'] && !nameValid()) { <span class="hint err">Enter full name</span> }
+              </div>
+
+              <div class="field">
+                <label for="un">Username</label>
+                <div class="with-state">
+                  <input id="un" class="input" [class.invalid]="userAvail().state === 'taken' || userAvail().state === 'invalid'" placeholder="Username"
+                    autocomplete="username" [ngModel]="username()" (ngModelChange)="onUsername($event)" name="username" (blur)="touch('user')" />
+                  <span class="state" [attr.data-s]="userAvail().state">
+                    @if (userAvail().state === 'checking') { <span class="spinner"></span> }
+                    @if (userAvail().state === 'ok') { <app-icon name="check" [size]="16" /> }
+                  </span>
+                </div>
+                @if (userAvail().msg) {
+                  <span class="hint" [class.err]="userAvail().state === 'taken' || userAvail().state === 'invalid'" [class.ok]="userAvail().state === 'ok'">{{ userAvail().msg }}</span>
+                }
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="em">Email Address</label>
+              <div class="with-state">
+                <input id="em" class="input" type="email" [class.invalid]="emailAvail().state === 'taken' || emailAvail().state === 'invalid'"
+                  placeholder="you@example.com" autocomplete="email" [ngModel]="email()" (ngModelChange)="onEmail($event)" name="email" (blur)="touch('email')" />
+                <span class="state" [attr.data-s]="emailAvail().state">
+                  @if (emailAvail().state === 'checking') { <span class="spinner"></span> }
+                  @if (emailAvail().state === 'ok') { <app-icon name="check" [size]="16" /> }
+                </span>
+              </div>
+              @if (emailAvail().msg) {
+                <span class="hint" [class.err]="emailAvail().state === 'taken' || emailAvail().state === 'invalid'" [class.ok]="emailAvail().state === 'ok'">{{ emailAvail().msg }}</span>
+              }
+            </div>
+
+            <div class="field-row">
+              <div class="field">
+                <label for="pw">Password</label>
+                <div class="with-state">
+                  <input id="pw" class="input" [type]="showPw() ? 'text' : 'password'" placeholder="Create password" autocomplete="new-password"
+                    [ngModel]="password()" (ngModelChange)="password.set($event)" name="password" (blur)="touch('pw')" />
+                  <button type="button" class="eye" (click)="showPw.set(!showPw())" [attr.aria-label]="showPw() ? 'Hide password' : 'Show password'">
+                    <app-icon [name]="showPw() ? 'eye-off' : 'eye'" [size]="16" />
+                  </button>
+                </div>
+              </div>
+
+              <div class="field">
+                <label for="pw2">Confirm Password</label>
+                <div class="with-state">
+                  <input id="pw2" class="input" [type]="showPw2() ? 'text' : 'password'" placeholder="Confirm password" autocomplete="new-password"
+                    [ngModel]="password2()" (ngModelChange)="password2.set($event)" name="password2" (blur)="touch('pw2')" />
+                  <button type="button" class="eye" (click)="showPw2.set(!showPw2())" [attr.aria-label]="showPw2() ? 'Hide password' : 'Show password'">
+                    <app-icon [name]="showPw2() ? 'eye-off' : 'eye'" [size]="16" />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="pw-meta">
+              <div class="meter" [attr.data-s]="strength()">
+                <i></i><i></i><i></i><i></i>
+                <span>{{ strengthLabel() }}</span>
+              </div>
+              @if (touched()['pw'] && !pwValid()) { <span class="hint err">At least 8 chars with letter &amp; number</span> }
+              @if (touched()['pw2'] && password2() && password() !== password2()) {
+                <span class="hint err">Passwords do not match</span>
+              }
+            </div>
+
+            <div class="field">
+              <label for="rf">Referrer <span class="opt">(optional)</span></label>
+              <input id="rf" class="input" [class.invalid]="refAvail().state === 'invalid'" placeholder="Referrer username"
+                [ngModel]="referrer()" (ngModelChange)="onReferrer($event)" name="referrer" />
+              @if (refAvail().msg) {
+                <span class="hint" [class.err]="refAvail().state === 'invalid'" [class.ok]="refAvail().state === 'ok'">{{ refAvail().msg }}</span>
+              }
+            </div>
+
+            <label class="checkbox terms">
+              <input type="checkbox" [ngModel]="terms()" (ngModelChange)="terms.set($event)" name="terms" />
+              <span>I have read and agree to the <a routerLink="/legal/terms" target="_blank">Terms &amp; Conditions</a> and
+                <a routerLink="/legal/privacy" target="_blank">Privacy Policy</a>.</span>
+            </label>
+            @if (touched()['terms'] && !terms()) { <span class="hint err block">Please accept the terms to continue</span> }
+
+            @if (error()) { <div class="alert">{{ error() }}</div> }
+
+            <button class="btn btn-brand block submit" type="submit" [disabled]="busy()">
+              @if (busy()) { <span class="spinner"></span> } @else { Create Account }
+            </button>
+          </form>
+          <p class="auth-switch">Already have an account? <button type="button" class="link" (click)="svc.mode.set('login')">Log In</button></p>
+        </div>
+      }
+
+      @case ('login') {
+        <div class="pane in">
+          <div class="pane-header">
+            <h2 id="auth-title">Welcome back</h2>
+            <p class="sub">Log in to continue trading.</p>
+          </div>
+          <form (ngSubmit)="login()">
+            <div class="field">
+              <label for="id">Email or Username</label>
+              <input id="id" class="input" placeholder="you@example.com" autocomplete="username" [ngModel]="identifier()" (ngModelChange)="identifier.set($event)" name="identifier" />
+            </div>
+            <div class="field">
+              <label for="lpw">Password</label>
+              <div class="with-state">
+                <input id="lpw" class="input" [type]="showPw() ? 'text' : 'password'" placeholder="Your password" autocomplete="current-password"
+                  [ngModel]="password()" (ngModelChange)="password.set($event)" name="password" />
+                <button type="button" class="eye" (click)="showPw.set(!showPw())" aria-label="Toggle password"><app-icon [name]="showPw() ? 'eye-off' : 'eye'" [size]="18" /></button>
+              </div>
+            </div>
+            <button type="button" class="link right" (click)="svc.mode.set('forgot')">Forgot password?</button>
+            @if (error()) { <div class="alert">{{ error() }}</div> }
+            <button class="btn btn-brand block submit" type="submit" [disabled]="busy()">
+              @if (busy()) { <span class="spinner"></span> } @else { Log In }
+            </button>
+          </form>
+          <p class="auth-switch">New to Y2 Markets? <button type="button" class="link" (click)="svc.mode.set('signup')">Create an account</button></p>
+        </div>
+      }
+
+      @case ('twofactor') {
+        <div class="pane in">
+          <div class="pane-header">
+            <h2 id="auth-title">Two-factor authentication</h2>
+            <p class="sub">Enter the 6-digit code from your authenticator app.</p>
+          </div>
+          <form (ngSubmit)="verify2fa()">
+            <div class="field">
+              <input class="input code" inputmode="numeric" maxlength="6" placeholder="000000" autocomplete="one-time-code" [ngModel]="code()" (ngModelChange)="code.set($event)" name="code" />
+            </div>
+            @if (error()) { <div class="alert">{{ error() }}</div> }
+            <button class="btn btn-brand block submit" type="submit" [disabled]="busy() || code().length !== 6">
+              @if (busy()) { <span class="spinner"></span> } @else { Verify }
+            </button>
+          </form>
+          <p class="auth-switch"><button type="button" class="link" (click)="svc.mode.set('login')">Back to log in</button></p>
+        </div>
+      }
+
+      @case ('forgot') {
+        <div class="pane in">
+          <div class="pane-header">
+            <h2 id="auth-title">Reset your password</h2>
+            <p class="sub">We'll e-mail you a secure link to choose a new password.</p>
+          </div>
+          @if (sent()) {
+            <div class="success-box anim-pop"><app-icon name="send" [size]="28" /><p>If an account exists for <b>{{ email() }}</b>, a reset link is on its way. It expires in 1 hour.</p></div>
+          } @else {
+            <form (ngSubmit)="forgot()">
+              <div class="field">
+                <label for="fe">Email Address</label>
+                <input id="fe" class="input" type="email" placeholder="you@example.com" [ngModel]="email()" (ngModelChange)="email.set($event)" name="email" />
+              </div>
+              @if (error()) { <div class="alert">{{ error() }}</div> }
+              <button class="btn btn-brand block submit" type="submit" [disabled]="busy() || !email()">
+                @if (busy()) { <span class="spinner"></span> } @else { Send reset link }
+              </button>
+            </form>
+          }
+          <p class="auth-switch"><button type="button" class="link" (click)="svc.mode.set('login')">Back to log in</button></p>
+        </div>
+      }
+
+      @case ('reset') {
+        <div class="pane in">
+          <div class="pane-header">
+            <h2 id="auth-title">Choose a new password</h2>
+            <p class="sub">Use at least 8 characters with a letter and a number.</p>
+          </div>
+          <form (ngSubmit)="reset()">
+            <div class="field">
+              <label for="np">New password</label>
+              <input id="np" class="input" type="password" autocomplete="new-password" [ngModel]="password()" (ngModelChange)="password.set($event)" name="password" />
+              <div class="meter" [attr.data-s]="strength()"><i></i><i></i><i></i><i></i><span>{{ strengthLabel() }}</span></div>
+            </div>
+            <div class="field">
+              <label for="np2">Confirm password</label>
+              <input id="np2" class="input" type="password" autocomplete="new-password" [ngModel]="password2()" (ngModelChange)="password2.set($event)" name="password2" />
+            </div>
+            @if (error()) { <div class="alert">{{ error() }}</div> }
+            <button class="btn btn-brand block submit" type="submit" [disabled]="busy() || !pwValid()">
+              @if (busy()) { <span class="spinner"></span> } @else { Update password }
+            </button>
+          </form>
+        </div>
+      }
+    }
+  </div>
+</aside>

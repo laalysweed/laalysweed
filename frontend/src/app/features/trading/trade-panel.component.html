@@ -1,0 +1,112 @@
+<div class="grid" [class.compact]="compact()">
+  <!-- TIME -->
+  <div class="block" spotlight="time">
+    <div class="lbl">Time <span class="q" title="How long the trade runs. It closes automatically at expiry.">?</span></div>
+    <button class="box" (click)="timeOpen.set(!timeOpen()); amountOpen.set(false)" [class.on]="timeOpen()">
+      <span class="val num">{{ timeText() }}</span>
+      <app-icon name="clock" [size]="26" [stroke]="1.8" />
+    </button>
+    @if (timeOpen()) {
+      <div class="pop-backdrop" (click)="timeOpen.set(false)"></div>
+      <div class="pop anim-pop">
+        <div class="steppers">
+          @for (u of ['h', 'm', 's']; track u) {
+            <div class="stepper">
+              <button (click)="adjust($any(u), 1)"><app-icon name="chevron-up" [size]="16" /></button>
+              <b class="num">{{ String(u === 'h' ? h() : u === 'm' ? m() : s()).padStart(2, '0') }}</b>
+              <button (click)="adjust($any(u), -1)"><app-icon name="chevron-down" [size]="16" /></button>
+              <small>{{ u === 'h' ? 'hours' : u === 'm' ? 'min' : 'sec' }}</small>
+            </div>
+          }
+        </div>
+        <div class="chips">
+          @for (p of presets; track p) {
+            <button [class.on]="ui.durationSec() === p" (click)="setDuration(p); timeOpen.set(false)">{{ label(p) }}</button>
+          }
+        </div>
+      </div>
+    }
+  </div>
+
+  <!-- AMOUNT -->
+  <div class="block" spotlight="amount">
+    <div class="lbl">Amount <span class="q" title="How much you invest in this trade.">?</span></div>
+    <div class="box amount" [class.warn]="insufficient()">
+      <button class="pm" (click)="step(-1)" aria-label="Decrease"><app-icon name="minus" [size]="16" /></button>
+      <input class="val num" inputmode="decimal" [ngModel]="amountText()" (change)="onAmountInput($any($event.target).value)" (focus)="amountOpen.set(true); timeOpen.set(false)" aria-label="Amount in dollars" />
+      <button class="cur" (click)="amountOpen.set(!amountOpen())" aria-label="Quick amounts">$</button>
+      <button class="pm" (click)="step(1)" aria-label="Increase"><app-icon name="plus" [size]="16" /></button>
+    </div>
+    @if (amountOpen()) {
+      <div class="pop-backdrop" (click)="amountOpen.set(false)"></div>
+      <div class="pop anim-pop">
+        <div class="chips">
+          @for (c of chips; track c) {
+            <button [class.on]="ui.amount() === c" (click)="setAmount(c); amountOpen.set(false)">${{ c / 100 }}</button>
+          }
+        </div>
+        <div class="avail">Available: <b>{{ money(accounts.available()) }}</b></div>
+      </div>
+    }
+    @if (insufficient()) {
+      <a class="topup-hint" routerLink="/app/finance/deposit">Insufficient balance · Top up</a>
+    }
+  </div>
+
+  <!-- PAYOUT -->
+  <div class="block payout-block" spotlight="payout">
+    <div class="lbl">Payout <span class="q" title="Profit you receive if your forecast is correct.">?</span></div>
+    <div class="payout">
+      <b>+{{ payoutPct() }}%</b>
+      <span class="num">+{{ money(profit()) }}</span>
+    </div>
+  </div>
+
+  <!-- ACTIONS -->
+  <div class="actions">
+    <button class="act buy" spotlight="buy" [class.pressed]="pressed() === 'up'" [disabled]="trades.placing() !== null || !tradable()"
+      (mouseenter)="hover('up')" (mouseleave)="hover(null)" (focus)="hover('up')" (blur)="hover(null)" (click)="place('up')">
+      @if (trades.placing() === 'up') { <span class="spinner"></span> } @else { <app-icon name="arrow-ur" [size]="24" [stroke]="2.4" /> }
+      <span>BUY</span>
+    </button>
+
+    <button class="act ai" (click)="openAi()" [class.on]="aiOpen()">
+      <span class="ai-badge">AI</span><span>TRADING</span>
+    </button>
+
+    <button class="act sell" spotlight="sell" [class.pressed]="pressed() === 'down'" [disabled]="trades.placing() !== null || !tradable()"
+      (mouseenter)="hover('down')" (mouseleave)="hover(null)" (focus)="hover('down')" (blur)="hover(null)" (click)="place('down')">
+      @if (trades.placing() === 'down') { <span class="spinner"></span> } @else { <app-icon name="arrow-dr" [size]="24" [stroke]="2.4" /> }
+      <span>SELL</span>
+    </button>
+    @if (!tradable()) { <div class="paused">Market paused: waiting for quotes</div> }
+  </div>
+</div>
+
+@if (aiOpen()) {
+  <div class="pop-backdrop" (click)="aiOpen.set(false)"></div>
+  <div class="ai-panel anim-pop">
+    <div class="ai-head"><span class="ai-badge big">AI</span><div><b>AI trading assistant</b><small>Technical signal for {{ asset()?.name }}</small></div>
+      <button class="icon-btn sm" (click)="aiOpen.set(false)"><app-icon name="close" [size]="16" /></button>
+    </div>
+    @if (aiLoading()) {
+      <div class="ai-body"><div class="skeleton" style="height: 60px"></div></div>
+    } @else if (aiSignal(); as sg) {
+      <div class="ai-body">
+        <div class="sig" [class.up]="sg.direction === 'up'">
+          <app-icon [name]="sg.direction === 'up' ? 'arrow-ur' : 'arrow-dr'" [size]="28" [stroke]="2.4" />
+          <div><b>{{ sg.direction === 'up' ? 'UP' : 'DOWN' }}</b> · {{ sg.timeframeSec / 60 }} min horizon<small>{{ sg.reason }}</small></div>
+          <span class="conf">{{ sg.confidence }}%</span>
+        </div>
+        <button class="btn block" [class.btn-buy]="sg.direction === 'up'" [class.btn-sell]="sg.direction === 'down'" (click)="place(sg.direction, 'ai')">
+          Place {{ sg.direction === 'up' ? 'BUY' : 'SELL' }} · {{ money(ui.amount()) }} · {{ timeText() }}
+        </button>
+      </div>
+    } @else {
+      <div class="ai-body scanning"><span class="radar"></span><p>No clear setup on this asset right now. The assistant scans EMA crossovers and RSI extremes on M1 every 20 seconds.</p></div>
+    }
+    @if (aiStats(); as st) {
+      <div class="ai-foot">Last 7 days: <b>{{ st.accuracy ?? '—' }}{{ st.accuracy !== null ? '%' : '' }}</b> accuracy ({{ st.hit }} hit / {{ st.miss }} miss). Signals are informational, not financial advice.</div>
+    }
+  </div>
+}

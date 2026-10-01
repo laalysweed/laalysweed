@@ -1,0 +1,133 @@
+<div class="layout" [class.panel-open]="!!ui.rightPanel()">
+  <!-- ============ CHART ============ -->
+  <section class="chart-area" spotlight="chart">
+    <div class="toolbar">
+      <app-asset-selector [symbol]="ui.symbol()" (selected)="ui.symbol.set($event)" spotlight="asset" />
+      <button class="tool" [class.on]="menu() === 'ind' || ui.indicators().length" (click)="toggleMenu('ind')" title="Indicators"><app-icon name="sliders" [size]="24" /></button>
+      <button class="tool" [class.on]="menu() === 'type'" (click)="toggleMenu('type')" title="Chart type"><app-icon [name]="isArea() ? 'chart-line' : 'chart-candle'" [size]="24" /></button>
+      <button class="tool txt" [class.on]="menu() === 'draw' || ui.drawTool() !== 'none'" (click)="toggleMenu('draw')" title="Drawing tools">A</button>
+      <button class="tool" [class.active]="ui.crosshair()" (click)="ui.crosshair.set(!ui.crosshair())" title="Crosshair"><app-icon name="crosshair" [size]="24" /></button>
+
+      @if (menu()) { <div class="menu-back" (click)="menu.set(null)"></div> }
+      @if (menu() === 'ind') {
+        <div class="menu anim-pop" style="left: 300px">
+          @for (i of indicatorList; track i.id) {
+            <label class="menu-row"><span class="sw" [style.background]="i.color"></span>{{ i.label }}
+              <span class="switch"><input type="checkbox" [checked]="ui.indicators().includes(i.id)" (change)="ui.toggleIndicator(i.id)" /><span></span></span>
+            </label>
+          }
+        </div>
+      }
+      @if (menu() === 'type') {
+        <div class="menu anim-pop" style="left: 360px">
+          @for (t of chartTypes; track t.id) {
+            <button class="menu-row" [class.sel]="chartType() === t.id" (click)="setType(t.id)"><app-icon [name]="t.icon" [size]="20" /> {{ t.label }}</button>
+          }
+        </div>
+      }
+      @if (menu() === 'draw') {
+        <div class="menu anim-pop" style="left: 420px">
+          <button class="menu-row" [class.sel]="ui.drawTool() === 'hline'" (click)="setTool('hline')"><app-icon name="hline" [size]="20" /> Horizontal line</button>
+          <button class="menu-row" [class.sel]="ui.drawTool() === 'trend'" (click)="setTool('trend')"><app-icon name="trend" [size]="20" /> Trend line</button>
+          <button class="menu-row danger" (click)="clearDrawings()"><app-icon name="trash" [size]="20" /> Clear drawings</button>
+        </div>
+      }
+    </div>
+
+    <div class="clock">
+      <span class="num">{{ clockText() }} {{ tzLabel() }}</span>
+      <button class="gear" (click)="toggleMenu('tz')" aria-label="Time zone"><app-icon name="settings" [size]="16" /></button>
+      @if (menu() === 'tz') {
+        <div class="menu tz anim-pop">
+          @for (o of tzOptions; track o) {
+            <button class="menu-row" [class.sel]="o === offset()" (click)="setTz(o)">{{ utcLabel(o) }}</button>
+          }
+        </div>
+      }
+    </div>
+
+    @if (ui.drawTool() !== 'none') {
+      <div class="draw-hint anim-rise">{{ ui.drawTool() === 'hline' ? 'Click the chart to place a horizontal line' : 'Click two points to draw a trend line' }}
+        <button (click)="ui.drawTool.set('none')">Done</button></div>
+    }
+
+    <div class="chart-wrap">
+      <app-chart
+        [symbol]="ui.symbol()"
+        [precision]="asset()?.precision ?? 2"
+        [chartType]="chartType()"
+        [timeframe]="ui.timeframe()"
+        [window]="ui.window()"
+        [indicators]="ui.indicators()"
+        [expirySec]="ui.durationSec()"
+        [trades]="trades.open()"
+        [flashing]="trades.flashing()"
+        [hoverDirection]="ui.hoverDirection()"
+        [crosshair]="ui.crosshair()"
+        [drawTool]="ui.drawTool()"
+        [clearDrawings]="ui.clearDrawings()"
+        [offsetMin]="offset()"
+        [showVolume]="asset()?.source === 'binance'"
+      />
+    </div>
+
+    <div class="sentiment" title="Share of open trades on this asset: BUY vs SELL">
+      <span class="pct up">{{ sentiment().up }}%</span>
+      <div class="bar"><i class="g" [style.height.%]="sentiment().up"></i><i class="r" [style.height.%]="sentiment().down"></i></div>
+      <span class="pct down">{{ sentiment().down }}%</span>
+    </div>
+
+    <div class="tf">
+      <button class="tf-pill" (click)="toggleMenu('tf')">{{ tfLabel() }} <app-icon name="chevron-up" [size]="14" [class.flip]="menu() === 'tf'" /></button>
+      @if (menu() === 'tf') {
+        <div class="menu up anim-pop">
+          <div class="menu-h">{{ isArea() ? 'Visible period' : 'Candle size' }}</div>
+          <div class="tf-grid">
+            @for (o of tfOptions(); track o) {
+              <button [class.sel]="(isArea() ? ui.window() : ui.timeframe()) === o" (click)="setTf(o)">{{ shortDuration(o) }}</button>
+            }
+          </div>
+        </div>
+      }
+    </div>
+
+    <button class="mobile-trades" (click)="panel('trades')">
+      <app-icon name="code" [size]="18" /> Trades @if (openCount()) { <b>{{ openCount() }}</b> }
+    </button>
+  </section>
+
+  <!-- ============ TRADE PANEL ============ -->
+  <aside class="trade-col">
+    <app-trade-panel [asset]="asset()" />
+  </aside>
+  <div class="trade-bar">
+    <app-trade-panel [asset]="asset()" [compact]="true" />
+  </div>
+
+  <!-- ============ SIDE PANEL ============ -->
+  <aside class="side" [class.open]="!!ui.rightPanel()" [class.sheet-open]="ui.mobileSheet() && !!ui.rightPanel()" spotlight="rail">
+    <button class="sheet-close" (click)="ui.mobileSheet.set(false)" aria-label="Close"><span></span></button>
+    @switch (ui.rightPanel()) {
+      @case ('trades') { <app-trades-panel /> }
+      @case ('signals') { <app-signals-panel /> }
+      @case ('social') { <app-social-panel /> }
+      @case ('pending') { <app-pending-panel [asset]="asset()" /> }
+    }
+  </aside>
+  @if (ui.mobileSheet() && ui.rightPanel()) { <div class="sheet-back" (click)="ui.mobileSheet.set(false)"></div> }
+
+  <!-- ============ RIGHT RAIL ============ -->
+  <nav class="rail" aria-label="Panels">
+    <button class="mode-btn" [class.classic]="ui.mode() === 'classic'" (click)="setMode('classic')">
+      <span class="sq"><app-icon name="swap" [size]="20" [stroke]="2.2" /></span><span>Classic mode</span>
+    </button>
+    <button class="mode-btn pro" [class.on]="ui.mode() === 'pro'" (click)="setMode('pro')">
+      <span class="sq"><app-icon name="chart-line" [size]="20" [stroke]="2.2" /></span><span>Pro mode</span>
+    </button>
+    <button class="rail-btn" [class.on]="ui.rightPanel() === 'trades'" (click)="panel('trades')"><app-icon name="code" [size]="26" /><span>Trades</span>
+      @if (openCount()) { <b class="dot">{{ openCount() }}</b> }</button>
+    <button class="rail-btn" [class.on]="ui.rightPanel() === 'signals'" (click)="panel('signals')"><app-icon name="signals" [size]="26" /><span>Signals</span></button>
+    <button class="rail-btn" [class.on]="ui.rightPanel() === 'social'" (click)="panel('social')"><app-icon name="social" [size]="26" /><span>Social Trading</span></button>
+    <button class="rail-btn" [class.on]="ui.rightPanel() === 'pending'" (click)="panel('pending')"><app-icon name="pending" [size]="26" /><span>Pending Trades</span></button>
+  </nav>
+</div>

@@ -1,0 +1,87 @@
+<button class="avatar" (click)="toggle()" aria-label="Account menu" [attr.aria-expanded]="open()">
+  @if (auth.user()?.avatarUrl) {
+    <img [src]="auth.user()!.avatarUrl" alt="" />
+  } @else {
+    <span class="face">{{ initials() }}</span>
+  }
+  <span class="spark">✦</span>
+</button>
+
+@if (open()) {
+  <div class="backdrop" (click)="close()"></div>
+  <div class="panel anim-pop" role="menu">
+    @if (auth.user(); as u) {
+      <section class="left">
+        <div class="head">
+          <div class="big-avatar">
+            @if (u.avatarUrl) { <img [src]="u.avatarUrl" alt="" /> } @else { <span>{{ initials() }}</span> }
+            <i>✦</i>
+          </div>
+          <div class="who">
+            <div class="mail"><small>{{ u.country }}</small> {{ hideEmail() ? '••••••@' + u.email.split('@')[1] : u.email }}
+              <button class="eye" (click)="hideEmail.set(!hideEmail())" aria-label="Hide e-mail"><app-icon [name]="hideEmail() ? 'eye-off' : 'eye'" [size]="18" /></button>
+            </div>
+            <span class="level">{{ u.level }}</span>
+            <ul>
+              <li><span class="tag">ID</span> {{ u.username }}</li>
+              <li><app-icon name="finance" [size]="15" /> {{ hideEmail() ? '••••••' : u.email }}</li>
+              <li><span class="coin">💰</span> {{ money(accounts.real()?.balance ?? 0) }}</li>
+            </ul>
+          </div>
+        </div>
+
+        <label class="public">
+          <span>MAKE YOUR PROFILE PUBLIC</span>
+          <span class="switch"><input type="checkbox" [checked]="u.isPublic" (change)="togglePublic($any($event.target).checked)" /><span></span></span>
+        </label>
+
+        <div class="stats">
+          <div class="st-head"><b>Real account statistics for today:</b>
+            <button class="refresh" [class.spin]="refreshing()" (click)="loadStats()" aria-label="Refresh"><app-icon name="refresh" [size]="16" /></button>
+          </div>
+          <div class="st-row"><span>Trades:</span><b>{{ stats()?.today?.trades ?? 0 }}</b></div>
+          <div class="st-row"><span>Trading turnover:</span><b>{{ money(stats()?.today?.turnover ?? 0) }}</b></div>
+          <div class="st-row"><span>Trading profit:</span><b [class.up-text]="(stats()?.today?.profit ?? 0) >= 0" [class.down-text]="(stats()?.today?.profit ?? 0) < 0">{{ signed(stats()?.today?.profit ?? 0) }}</b></div>
+          <div class="mode" [class.real]="isReal()">YOU ARE TRADING ON {{ isReal() ? 'REAL' : accounts.active()?.type === 'tournament' ? 'TOURNAMENT' : 'DEMO' }} ACCOUNT</div>
+        </div>
+
+        <div class="status"><span>Email status:</span>
+          @if (u.emailVerified) { <b class="up-text">✓ Verified</b> } @else { <a routerLink="/app/profile" (click)="close()" class="warn">⚠ Unverified</a> }
+        </div>
+        <div class="status"><span>Identity status:</span>
+          @switch (u.kycStatus) {
+            @case ('approved') { <b class="up-text">✓ Verified</b> }
+            @case ('pending') { <b class="amber">⏳ Under review</b> }
+            @default { <a routerLink="/app/profile" [fragment]="'kyc'" (click)="close()" class="warn">⚠ Unverified</a> }
+          }
+        </div>
+      </section>
+
+      <section class="right">
+        <a routerLink="/app/profile" (click)="close()"><app-icon name="profile" [size]="20" /> Profile</a>
+        <a routerLink="/app/finance/deposit" (click)="close()"><app-icon name="deposit" [size]="20" /> Deposit</a>
+        <a routerLink="/app/finance/withdrawal" (click)="close()"><app-icon name="withdraw" [size]="20" /> Withdrawal</a>
+        <a routerLink="/app/referrals" (click)="close()"><app-icon name="referrals" [size]="20" /> Referrals</a>
+        <a routerLink="/app/history" (click)="close()"><app-icon name="history" [size]="20" /> History</a>
+        <a routerLink="/app/help" (click)="close()"><app-icon name="help" [size]="20" /> Help</a>
+        <a class="lang"><app-icon name="globe" [size]="20" /> English <app-icon name="chevron-down" [size]="14" /></a>
+        @if (auth.isAdmin()) {
+          <a routerLink="/admin" (click)="close()" class="admin"><app-icon name="settings" [size]="20" /> Admin panel</a>
+        }
+        <hr />
+        <button class="logout" (click)="logout()"><app-icon name="logout" [size]="20" /> Logout</button>
+        <hr />
+        <button (click)="picker.set(!picker())"><app-icon name="image" [size]="20" /> Change Background</button>
+        @if (picker()) {
+          <div class="scenes anim-rise">
+            @for (s of scenes; track s.id) {
+              <button class="scene" [class.on]="ui.scene() === s.id" [style.background-image]="ui.sceneUrl(s.id)" (click)="ui.scene.set(s.id)" [attr.aria-label]="s.label">
+                <span>{{ s.label }}</span>
+              </button>
+            }
+          </div>
+        }
+      </section>
+    }
+  </div>
+}

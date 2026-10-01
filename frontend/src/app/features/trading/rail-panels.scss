@@ -1,0 +1,338 @@
+@use 'mixins' as m;
+
+:host {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  padding: 0 14px 14px;
+  overflow-y: auto;
+  @include m.scrollbar;
+}
+
+.title {
+  text-align: center;
+  font-family: var(--font-ui);
+  font-weight: 600;
+  font-size: 20px;
+  padding: 22px 0 16px;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 12px;
+  div {
+    padding: 10px;
+    border-radius: 10px;
+    background: rgba(17, 22, 34, 0.85);
+    text-align: center;
+  }
+  b {
+    display: block;
+    font-size: 18px;
+  }
+  span {
+    font-size: 11px;
+    color: var(--muted);
+  }
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sig {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  width: 100%;
+  padding: 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgba(17, 22, 34, 0.85);
+  text-align: left;
+  animation: rise-in 300ms var(--ease);
+  @include m.transition(background, border-color);
+  &:hover {
+    background: rgba(26, 32, 48, 0.95);
+  }
+  &.done {
+    opacity: 0.7;
+  }
+  .arrow {
+    display: grid;
+    place-items: center;
+    width: 38px;
+    height: 38px;
+    flex: none;
+    border-radius: 10px;
+    background: rgba(239, 68, 68, 0.14);
+    color: #f87171;
+    &.up {
+      background: rgba(34, 197, 94, 0.14);
+      color: #4ade80;
+    }
+  }
+  .body {
+    flex: 1;
+    min-width: 0;
+    small {
+      display: block;
+      font-size: 11.5px;
+      color: var(--muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  }
+  .conf {
+    display: block;
+    height: 3px;
+    border-radius: 2px;
+    background: rgba(255, 255, 255, 0.08);
+    margin-top: 6px;
+    i {
+      display: block;
+      height: 100%;
+      border-radius: 2px;
+      background: var(--brand);
+    }
+  }
+  .side {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+    small {
+      font-size: 11px;
+      color: var(--muted);
+    }
+  }
+}
+
+.disc,
+.hint-box {
+  margin-top: 14px;
+  font-size: 11.5px;
+  color: #5b6477;
+  line-height: 1.5;
+}
+.hint-box {
+  margin: 0 0 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(56, 189, 248, 0.06);
+  color: #9fb7d6;
+}
+
+.sub-h {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  margin: 10px 0 8px;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgba(17, 22, 34, 0.85);
+  text-align: left;
+  @include m.transition(background);
+  &:hover {
+    background: rgba(26, 32, 48, 0.95);
+  }
+  .body {
+    flex: 1;
+    min-width: 0;
+    small {
+      display: block;
+      font-size: 11.5px;
+      color: var(--muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  }
+  .rank {
+    width: 18px;
+    color: var(--muted);
+    font-weight: 700;
+  }
+  &.follow {
+    margin-bottom: 6px;
+  }
+  &.pend {
+    .arrow {
+      color: var(--sell);
+      &.up {
+        color: var(--buy);
+      }
+    }
+    &[data-status='cancelled'],
+    &[data-status='expired'] {
+      opacity: 0.55;
+    }
+  }
+  .icon-btn.sm {
+    width: 30px;
+    height: 30px;
+  }
+}
+.ava {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #2dd4bf, #2f80ed);
+  font-weight: 800;
+  color: #07131a;
+  &.lg {
+    width: 48px;
+    height: 48px;
+    font-size: 20px;
+  }
+}
+
+.empty {
+  padding: 28px 10px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 13.5px;
+}
+
+.modal-back {
+  position: fixed;
+  inset: 0;
+  z-index: 95;
+  background: rgba(6, 9, 15, 0.6);
+}
+.modal {
+  position: fixed;
+  z-index: 96;
+  top: 50%;
+  left: 50%;
+  width: min(440px, calc(100vw - 24px));
+  max-height: 86vh;
+  overflow-y: auto;
+  translate: -50% -50%;
+  padding: 20px;
+  border-radius: 18px;
+  background: #1a2030;
+  border: 1px solid var(--border-strong);
+  box-shadow: var(--shadow-2);
+  header {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    .icon-btn {
+      margin-left: auto;
+    }
+  }
+  .kpis {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin: 16px 0;
+    div {
+      text-align: center;
+      padding: 10px 4px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.04);
+    }
+    b {
+      display: block;
+    }
+    span {
+      font-size: 11px;
+      color: var(--muted);
+    }
+  }
+  .recent {
+    max-height: 170px;
+    overflow-y: auto;
+    margin-bottom: 14px;
+    .r {
+      display: flex;
+      gap: 8px;
+      padding: 7px 4px;
+      border-bottom: 1px solid var(--border);
+      font-size: 13.5px;
+    }
+  }
+  .copy {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      .input {
+        width: 120px;
+      }
+    }
+  }
+}
+
+.pending-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  margin-bottom: 14px;
+  border-radius: 12px;
+  background: rgba(17, 22, 34, 0.85);
+  .two {
+    display: grid;
+    grid-template-columns: 110px 1fr;
+    gap: 8px;
+  }
+  .summary {
+    font-size: 12.5px;
+    color: var(--muted);
+  }
+}
+.seg {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  button {
+    height: 40px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: none;
+    font-weight: 700;
+    color: var(--muted);
+    @include m.transition(background, color, border-color);
+    &.on {
+      color: #fff;
+      background: rgba(47, 128, 237, 0.25);
+      border-color: rgba(47, 128, 237, 0.6);
+    }
+    &.up.on {
+      background: rgba(34, 197, 94, 0.22);
+      border-color: rgba(34, 197, 94, 0.6);
+    }
+    &.down.on {
+      background: rgba(239, 68, 68, 0.2);
+      border-color: rgba(239, 68, 68, 0.6);
+    }
+  }
+  &.small button {
+    height: 32px;
+    font-size: 13px;
+  }
+}

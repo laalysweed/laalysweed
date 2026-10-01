@@ -1,0 +1,118 @@
+<div class="scene" [style.background-image]="ui.sceneUrl()"></div>
+<div class="scene-shade" [class.trading]="isTrading()"></div>
+
+<!-- ============ TOP BAR ============ -->
+<header class="topbar">
+  <a class="brand" routerLink="/app/trading"><app-logo [size]="44" /></a>
+
+  <div class="pins" spotlight="pins">
+    <app-icon name="star" [size]="24" class="star" />
+    @if (pinned().length) {
+      <div class="pin-list">
+        @for (p of pinned(); track p.symbol) {
+          <button class="pin" (click)="selectPinned(p.symbol)" [class.active]="ui.symbol() === p.symbol">
+            <span class="p-ico">{{ p.icon || p.name[0] }}</span>
+            <span class="p-name">{{ p.name }}</span>
+            <span class="p-chg" [class.up-text]="p.up" [class.down-text]="!p.up">{{ p.change }}</span>
+          </button>
+        }
+      </div>
+    } @else {
+      <span class="hint">Tap ☆ next to any asset to pin it here</span>
+    }
+  </div>
+
+  <div class="right">
+    @for (p of promos(); track p.id) {
+      <a class="promo" [routerLink]="p.link">
+        <span class="promo-ico" [class]="p.id"><app-icon [name]="p.icon" [size]="24" /></span>
+        <span class="promo-text"><b>{{ p.title }}</b><small>{{ p.sub }}</small></span>
+        <button class="x" (click)="dismissPromo(p.id, $event)" aria-label="Dismiss"><app-icon name="close" [size]="10" [stroke]="3" /></button>
+      </a>
+    }
+
+    <!-- SOUND TOGGLE BUTTON -->
+    <button class="sound-toggle" (click)="sound.toggle()" [attr.aria-label]="sound.enabled() ? 'Mute sound' : 'Unmute sound'" [title]="sound.enabled() ? 'Mute sound' : 'Unmute sound'">
+      <app-icon [name]="sound.enabled() ? 'volume' : 'volume-x'" [size]="20" />
+    </button>
+
+    <app-account-switcher [product]="product()" spotlight="account" />
+    <a class="btn btn-buy topup" routerLink="/app/finance/deposit" spotlight="topup"><app-icon name="wallet" [size]="20" /><span>Top up</span></a>
+    <app-account-menu />
+  </div>
+</header>
+
+<!-- ============ SIDEBAR ============ -->
+<nav class="sidebar" aria-label="Terminal">
+  @for (n of nav; track n.id) {
+    <a class="nav-item" [class.active]="isActive(n)" [routerLink]="n.link ?? null" (click)="navClick(n, $event)" [spotlight]="'nav-' + n.id" tabindex="0">
+      <span class="ico">
+        <app-icon [name]="n.icon" [size]="28" [stroke]="1.6" />
+        @if (n.badge && n.badge() > 0) { <b class="badge-dot">{{ n.badge() }}</b> }
+      </span>
+      <span class="lbl">{{ n.label }}</span>
+    </a>
+  }
+  @if (auth.isAdmin()) {
+    <a class="nav-item admin" routerLink="/admin"><span class="ico"><app-icon name="settings" [size]="26" [stroke]="1.6" /></span><span class="lbl">Admin</span></a>
+  }
+</nav>
+
+@if (tradingMenu()) {
+  <div class="popover-backdrop" (click)="tradingMenu.set(false)"></div>
+  <div class="trading-pop anim-pop">
+    <button (click)="goTrading('otc')" [class.on]="product() === 'OTC' && isTrading()"><app-icon name="book" [size]="22" /> OTC Trading</button>
+    <button (click)="goTrading('cfd')" [class.on]="product() === 'CFD'"><app-icon name="globe" [size]="22" /> CFD Trading</button>
+  </div>
+}
+
+<!-- FINANCE DROPDOWN (IMAGE 1) -->
+@if (financeMenu()) {
+  <div class="popover-backdrop" (click)="financeMenu.set(false)"></div>
+  <div class="finance-pop anim-pop">
+    <button (click)="goFinance('/app/finance/deposit')">
+      <app-icon name="download" [size]="20" />
+      <span>Deposit</span>
+    </button>
+    <button (click)="goFinance('/app/finance/withdrawal')">
+      <app-icon name="upload" [size]="20" />
+      <span>Withdrawal</span>
+    </button>
+    <button (click)="goFinance('/app/finance/history')">
+      <app-icon name="clock" [size]="20" />
+      <span>History</span>
+    </button>
+  </div>
+}
+
+<!-- ============ CONTENT ============ -->
+<main class="content" [class.trading]="isTrading()">
+  <router-outlet />
+</main>
+
+<!-- ============ MOBILE NAV ============ -->
+<nav class="mobile-nav" aria-label="Mobile">
+  @for (n of mobileNav(); track n.id) {
+    <a [class.active]="isActive(n)" [routerLink]="n.link ?? null" (click)="navClick(n, $event)">
+      <span class="ico">
+        <app-icon [name]="n.icon" [size]="24" [stroke]="1.6" />
+        @if (n.badge && n.badge() > 0) { <b class="badge-dot">{{ n.badge() }}</b> }
+      </span>
+      <span>{{ n.label }}</span>
+    </a>
+  }
+  <a (click)="ui.mobileNav.set(!ui.mobileNav())" [class.active]="ui.mobileNav()"><span class="ico"><app-icon name="menu" [size]="24" /></span><span>More</span></a>
+</nav>
+@if (ui.mobileNav()) {
+  <div class="more-sheet-backdrop anim-fade" (click)="ui.mobileNav.set(false)"></div>
+  <div class="more-sheet">
+    <a routerLink="/app/referrals"><app-icon name="referrals" /> Referrals</a>
+    <a routerLink="/app/tournaments"><app-icon name="trophy" /> Tournaments</a>
+    <a routerLink="/app/help"><app-icon name="help" /> Help</a>
+    <a routerLink="/app/finance/bonuses"><app-icon name="gift" /> Bonuses</a>
+    @if (auth.isAdmin()) { <a routerLink="/admin"><app-icon name="settings" /> Admin</a> }
+  </div>
+}
+
+<app-chat-panel />
+<app-onboarding />

@@ -1,0 +1,106 @@
+<div class="page">
+  <h1>Profile</h1>
+  @if (auth.user(); as u) {
+    <div class="hero card-solid anim-rise">
+      <div class="ava">{{ u.fullName[0] }}</div>
+      <div class="who">
+        <h2>{{ u.fullName }}</h2>
+        <p class="muted">&#64;{{ u.username }} · {{ u.email }}</p>
+        <div class="tags">
+          <span class="badge green">{{ u.level }}</span>
+          <span class="badge" [class.green]="u.emailVerified" [class.amber]="!u.emailVerified">{{ u.emailVerified ? 'E-mail verified' : 'E-mail unverified' }}</span>
+          <span class="badge" [class.green]="u.kycStatus === 'approved'" [class.amber]="u.kycStatus !== 'approved'">Identity: {{ u.kycStatus === 'none' ? 'not submitted' : u.kycStatus }}</span>
+          <span class="badge" [class.green]="u.twoFactorEnabled">2FA {{ u.twoFactorEnabled ? 'on' : 'off' }}</span>
+        </div>
+      </div>
+      @if (stats(); as s) {
+        <div class="kpis">
+          <div><b>{{ s.allTime.trades }}</b><span>Real trades</span></div>
+          <div><b>{{ s.allTime.winRate }}%</b><span>Win rate</span></div>
+          <div><b [class.up-text]="s.allTime.profit >= 0" [class.down-text]="s.allTime.profit < 0">{{ signed(s.allTime.profit) }}</b><span>Net profit</span></div>
+          <div><b>{{ money(s.totalDeposited) }}</b><span>Deposited</span></div>
+        </div>
+      }
+    </div>
+
+    <div class="grid-2">
+      <!-- DETAILS -->
+      <section class="card-solid anim-rise">
+        <h3>Personal details</h3>
+        <div class="field"><label>Full name</label><input class="input" [ngModel]="fullName()" (ngModelChange)="fullName.set($event)" /></div>
+        <div class="field"><label>Phone (M-Pesa)</label><input class="input" inputmode="tel" placeholder="07XX XXX XXX" [ngModel]="phone()" (ngModelChange)="phone.set($event)" /></div>
+        <div class="two">
+          <div class="field"><label>Country</label>
+            <select class="input" [ngModel]="country()" (ngModelChange)="country.set($event)">@for (c of countries; track c.code) { <option [value]="c.code">{{ c.name }}</option> }</select></div>
+          <div class="field"><label>Time zone</label>
+            <select class="input" [ngModel]="tz()" (ngModelChange)="tz.set($event)">@for (o of tzOptions; track o) { <option [ngValue]="o">{{ utc(o) }}</option> }</select></div>
+        </div>
+        <button class="btn btn-primary" (click)="save()" [disabled]="saving()">Save changes</button>
+        @if (!u.emailVerified) {
+          <div class="notice"><app-icon name="warn" [size]="18" /> Your e-mail isn't verified yet. <button class="link" (click)="resend()">Resend link</button></div>
+        }
+      </section>
+
+      <!-- KYC -->
+      <section class="card-solid anim-rise" id="kyc">
+        <h3>Identity verification</h3>
+        <p class="muted">Upload clear photos (JPG, PNG, WEBP or PDF up to 8 MB). Required: ID front and a selfie holding your ID.</p>
+        @if (kyc()?.status === 'rejected') { <div class="notice red">Rejected: {{ kyc()?.note ?? 'please upload clearer documents' }}</div> }
+        @if (kyc()?.status === 'approved') { <div class="notice green"><app-icon name="shield" [size]="18" /> Your identity is verified.</div> }
+        <div class="docs">
+          @for (d of docTypes; track d.id) {
+            <label class="doc" [class.done]="hasDoc(d.id)">
+              <input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" (change)="upload(d.id, $event)" class="sr-only" [disabled]="kyc()?.status === 'approved'" />
+              <span class="d-ico">
+                @if (uploading() === d.id) { <span class="spinner"></span> } @else if (hasDoc(d.id)) { <app-icon name="check" [size]="20" /> } @else { <app-icon name="upload" [size]="20" /> }
+              </span>
+              <span><b>{{ d.label }}</b><small>{{ d.required ? 'Required' : 'Optional' }}{{ hasDoc(d.id) ? ' · uploaded' : '' }}</small></span>
+            </label>
+          }
+        </div>
+        <p class="muted small">Status: <b>{{ kyc()?.status ?? '…' }}</b></p>
+      </section>
+
+      <!-- SECURITY -->
+      <section class="card-solid anim-rise">
+        <h3>Change password</h3>
+        <div class="field"><label>Current password</label><input class="input" type="password" autocomplete="current-password" [ngModel]="curPw()" (ngModelChange)="curPw.set($event)" /></div>
+        <div class="field"><label>New password</label><input class="input" type="password" autocomplete="new-password" [ngModel]="newPw()" (ngModelChange)="newPw.set($event)" /><span class="hint">8+ characters with a letter and a number</span></div>
+        <button class="btn btn-primary" (click)="changePw()" [disabled]="pwBusy() || !curPw() || newPw().length < 8">Update password</button>
+      </section>
+
+      <section class="card-solid anim-rise">
+        <h3>Two-factor authentication</h3>
+        @if (u.twoFactorEnabled) {
+          <p class="muted">2FA is on. Enter a code and your password to turn it off.</p>
+          <div class="two">
+            <input class="input" inputmode="numeric" maxlength="6" placeholder="6-digit code" [ngModel]="code()" (ngModelChange)="code.set($event)" />
+            <input class="input" type="password" placeholder="Password" [ngModel]="disablePw()" (ngModelChange)="disablePw.set($event)" />
+          </div>
+          <button class="btn btn-ghost mt" (click)="disable2fa()">Disable 2FA</button>
+        } @else if (twoFa(); as t) {
+          <div class="qr anim-pop">
+            <img [src]="t.qr" alt="2FA QR code" width="180" height="180" />
+            <div>
+              <p>Scan with Google Authenticator, Authy or 1Password, then enter the 6-digit code.</p>
+              <code class="secret">{{ t.secret }}</code>
+              <input class="input mt" inputmode="numeric" maxlength="6" placeholder="000000" [ngModel]="code()" (ngModelChange)="code.set($event)" />
+              <button class="btn btn-primary mt" (click)="enable2fa()" [disabled]="code().length !== 6">Enable</button>
+            </div>
+          </div>
+        } @else {
+          <p class="muted">Protect your account with a one-time code from an authenticator app at every login.</p>
+          <button class="btn btn-primary" (click)="setup2fa()"><app-icon name="shield" [size]="18" /> Set up 2FA</button>
+        }
+      </section>
+    </div>
+
+    <section class="card-solid anim-rise sessions">
+      <div class="row"><h3>Active sessions</h3><span class="spacer"></span><button class="btn btn-ghost sm" (click)="logoutAll()">Log out everywhere</button></div>
+      @for (s of sessions(); track s.id) {
+        <div class="sess"><app-icon name="terminal" [size]="20" /><div><b>{{ device(s.userAgent) }}</b><small class="muted">{{ s.ip }} · {{ dt(s.createdAt) }}</small></div>
+          <button class="btn btn-soft sm" (click)="revoke(s.id)">Revoke</button></div>
+      }
+    </section>
+  }
+</div>

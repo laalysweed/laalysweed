@@ -1,0 +1,106 @@
+// Candlestick loader shared by the boot screen (index.html) and <app-loader>.
+.y2-loader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 34px;
+}
+
+.y2-candles {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  height: 90px;
+
+  span {
+    position: relative;
+    width: 14px;
+    height: 78px;
+    display: grid;
+    place-items: center;
+
+    // wick
+    &::before {
+      content: '';
+      position: absolute;
+      left: 50%;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      transform: translateX(-50%);
+      background: rgba(255, 255, 255, 0.16);
+      border-radius: 2px;
+    }
+
+    // body
+    b {
+      position: relative;
+      width: 14px;
+      height: var(--h);
+      border-radius: 3px;
+      transform: translateY(var(--o));
+      animation: y2-candle 1.6s cubic-bezier(0.45, 0, 0.25, 1) infinite;
+      animation-delay: calc(var(--i) * 140ms);
+    }
+  }
+
+  .red b {
+    background: #f0144f;
+    box-shadow: 0 0 14px rgba(240, 20, 79, 0.75);
+  }
+  .red.dim b {
+    background: #b01747;
+    box-shadow: 0 0 10px rgba(176, 23, 71, 0.55);
+  }
+  .green b {
+    background: #0fa968;
+    box-shadow: 0 0 12px rgba(15, 169, 104, 0.6);
+  }
+  .green.dim b {
+    background: #0b7a4c;
+    box-shadow: 0 0 8px rgba(11, 122, 76, 0.45);
+  }
+  .green.bright b {
+    background: #15e28a;
+    box-shadow:
+      0 0 18px rgba(21, 226, 138, 0.9),
+      0 0 36px rgba(21, 226, 138, 0.35);
+  }
+}
+
+@keyframes y2-candle {
+  0%,
+  100% {
+    transform: translateY(var(--o)) scaleY(1);
+  }
+  35% {
+    transform: translateY(calc(var(--o) - 12px)) scaleY(1.18);
+  }
+  70% {
+    transform: translateY(calc(var(--o) + 8px)) scaleY(0.86);
+  }
+}
+
+.y2-word {
+  font-family: 'Segoe UI', var(--font-ui);
+  font-weight: 700;
+  font-size: 19px;
+  letter-spacing: 0.34em;
+  padding-left: 0.34em;
+  background: linear-gradient(90deg, #d6dbe6 0%, #d6dbe6 30%, #ffffff 45%, #6f7789 55%, #d6dbe6 70%, #d6dbe6 100%);
+  background-size: 250% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: y2-shimmer 2.2s linear infinite;
+  filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.12));
+}
+
+@keyframes y2-shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -150% 0;
+  }
+}

@@ -1,0 +1,283 @@
+<!-- ============ NAVBAR ============ -->
+<header class="nav" [class.scrolled]="scrolled()">
+  <a class="brand" routerLink="/" aria-label="Y2 Markets home"><app-logo [size]="46" [wordmark]="false" /></a>
+
+  <nav class="nav-pill" (mouseleave)="hoverNav(null)" aria-label="Main">
+    @for (n of nav(); track n.id; let i = $index) {
+      <a #navLink [href]="'#' + n.id" [class.active]="activeNav() === n.id" (mouseenter)="hoverNav(i)" (click)="go(n.id, $event)">{{ n.label }}</a>
+    }
+    <span class="underline" [style.transform]="'translateX(' + indicator().left + 'px)'" [style.width.px]="indicator().width" [class.visible]="indicator().visible"></span>
+  </nav>
+
+  <div class="actions">
+    <div class="lang" (mouseleave)="langOpen.set(false)">
+      <button class="lang-btn" (click)="langOpen.set(!langOpen())" [attr.aria-expanded]="langOpen()">
+        <app-icon name="globe" [size]="18" /> {{ i18n.currentLang() }} <app-icon name="chevron-down" [size]="12" />
+      </button>
+      @if (langOpen()) {
+        <div class="menu anim-pop">
+          @for (l of i18n.languages; track l.code) {
+            <button [class.on]="i18n.currentLang() === l.code" (click)="selectLang(l.code)">
+              <span>{{ l.native }}</span>
+              @if (i18n.currentLang() === l.code) {
+                <app-icon name="check" [size]="14" />
+              }
+            </button>
+          }
+        </div>
+      }
+    </div>
+    @if (auth.isLoggedIn()) {
+      <a class="btn btn-brand pill" routerLink="/app/trading">{{ i18n.t().openTerminal }} <app-icon name="arrow-right" [size]="18" /></a>
+    } @else {
+      <button class="login" (click)="start('login')">{{ i18n.t().logIn }}</button>
+      <button class="cta" (click)="start('signup')">{{ i18n.t().createAccount }}</button>
+    }
+    <button class="burger icon-btn" (click)="mobileMenu.set(!mobileMenu())" aria-label="Menu"><app-icon [name]="mobileMenu() ? 'close' : 'menu'" /></button>
+  </div>
+</header>
+
+@if (mobileMenu()) {
+  <div class="mobile-menu anim-fade" (click)="mobileMenu.set(false)">
+    <div class="sheet anim-rise" (click)="$event.stopPropagation()">
+      <div class="sheet-lang-row">
+        <span class="muted">Language</span>
+        <button class="sheet-lang-btn" (click)="langOpen.set(!langOpen())">
+          <app-icon name="globe" [size]="16" /> {{ i18n.currentLang() }} <app-icon name="chevron-down" [size]="12" />
+        </button>
+      </div>
+      @if (langOpen()) {
+        <div class="sheet-lang-list anim-pop">
+          @for (l of i18n.languages; track l.code) {
+            <button class="lang-opt" [class.on]="i18n.currentLang() === l.code" (click)="selectLang(l.code); langOpen.set(false)">
+              <span>{{ l.native }}</span>
+              @if (i18n.currentLang() === l.code) { <app-icon name="check" [size]="14" /> }
+            </button>
+          }
+        </div>
+      }
+      @for (n of nav(); track n.id) {
+        <a [href]="'#' + n.id" (click)="go(n.id, $event)">{{ n.label }} <app-icon name="chevron-right" [size]="18" /></a>
+      }
+      @if (!auth.isLoggedIn()) {
+        <button class="btn btn-ghost block lg" (click)="start('login'); mobileMenu.set(false)">{{ i18n.t().logIn }}</button>
+        <button class="btn btn-brand block lg" (click)="start('signup'); mobileMenu.set(false)">{{ i18n.t().createAccount }}</button>
+      } @else {
+        <a class="btn btn-brand block lg" routerLink="/app/trading" (click)="mobileMenu.set(false)">{{ i18n.t().openTerminal }}</a>
+      }
+    </div>
+  </div>
+}
+
+<!-- ============ HERO ============ -->
+<section class="hero" #hero>
+  <div class="bg"></div>
+  <div class="bg-shade"></div>
+  <div class="hero-map"><app-hero-map /></div>
+
+  <div class="hero-inner">
+    <h1 class="headline">
+      <span class="w" style="--d: 0">{{ i18n.t().heroW1 }}</span>
+      <span class="w g" style="--d: 1">{{ i18n.t().heroW2 }}</span>
+      <span class="w" style="--d: 2">{{ i18n.t().heroW3 }}</span>
+      <span class="w g" style="--d: 3">{{ i18n.t().heroW4 }}</span>
+    </h1>
+    <p class="lead anim-rise" style="animation-delay: 700ms">
+      {{ i18n.t().heroLead }}
+    </p>
+    <div class="cta-row anim-rise" style="animation-delay: 850ms">
+      <button class="btn btn-brand pill lg" (click)="start('signup')">{{ i18n.t().startTrading }} <app-icon name="arrow-right" [size]="18" /></button>
+      <button class="btn btn-ghost pill lg" (click)="go('markets')">{{ i18n.t().exploreMarkets }}</button>
+    </div>
+    <div class="trust anim-rise" style="animation-delay: 1000ms">
+      <span><app-icon name="shield" [size]="16" /> {{ i18n.t().trust2fa }}</span>
+      <span><app-icon name="wallet" [size]="16" /> {{ i18n.t().trustDeposit }}</span>
+      <span><app-icon name="bolt" [size]="16" /> {{ i18n.t().trustTrades }}</span>
+    </div>
+  </div>
+  <button class="scroll-hint" (click)="go('showcase')" aria-label="Scroll to showcase"><span></span></button>
+</section>
+
+<!-- ============ BUILT FOR TRADERS SHOWCASE ============ -->
+<section id="showcase" class="section showcase-section">
+  <div class="container showcase-container">
+    <div class="showcase-content">
+      <div class="showcase-header">
+        <span class="eyebrow-cyan">{{ i18n.t().builtForTraders }}</span>
+        <h2 class="showcase-headline">
+          {{ i18n.t().everythingYouNeed }}<br />
+          {{ i18n.t().nothingYouDont }}
+        </h2>
+      </div>
+
+      <div class="showcase-grid">
+        <div class="sc-card">
+          <div class="sc-ico"><app-icon name="chart-bars" [size]="24" /></div>
+          <h4>{{ i18n.t().advCharts }}</h4>
+        </div>
+        <div class="sc-card">
+          <div class="sc-ico"><app-icon name="reticle" [size]="24" /></div>
+          <h4>{{ i18n.t().aiInsights }}</h4>
+        </div>
+        <div class="sc-card">
+          <div class="sc-ico"><app-icon name="users" [size]="24" /></div>
+          <h4>{{ i18n.t().riskMgmt }}</h4>
+        </div>
+        <div class="sc-card">
+          <div class="sc-ico"><app-icon name="layers" [size]="24" /></div>
+          <h4>{{ i18n.t().smartPortfolio }}</h4>
+        </div>
+      </div>
+    </div>
+
+    <div class="showcase-media">
+      <div class="device-glow"></div>
+      <img src="/img/devices-mockup.png" alt="Y2 Markets Mobile and Desktop Trading Platform" class="showcase-img" />
+    </div>
+  </div>
+</section>
+
+<!-- ============ MARKETS ============ -->
+<section id="markets" class="section">
+  <div class="container">
+    <div class="section-head">
+      <span class="eyebrow">{{ i18n.t().navMarkets }}</span>
+      <h2>Prices that move with the world</h2>
+      <p class="muted">Real-time quotes streamed straight to your screen. Tap any instrument to start trading.</p>
+    </div>
+    <div class="cats">
+      @for (c of categories(); track c.id) {
+        <button [class.active]="category() === c.id" (click)="category.set(c.id)">{{ c.label }}</button>
+      }
+    </div>
+    <div class="markets card">
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr><th>{{ i18n.t().thAsset }}</th><th>{{ i18n.t().thPrice }}</th><th>{{ i18n.t().thChange }}</th><th class="hide-sm">Payout</th><th></th></tr>
+          </thead>
+          <tbody>
+            @for (r of rows(); track r.symbol) {
+              <tr (click)="trade(r.symbol)">
+                <td>
+                  <div class="inst"><span class="ico">{{ r.icon || r.name[0] }}</span><div><b>{{ r.name }}</b><small>{{ r.source === 'binance' ? 'Live market' : 'OTC · 24/7' }}</small></div></div>
+                </td>
+                <td class="num">{{ r.priceText }}</td>
+                <td class="num" [class.up-text]="r.up" [class.down-text]="!r.up">{{ r.changeText }}</td>
+                <td class="hide-sm"><span class="badge green">{{ r.payout }}%</span></td>
+                <td class="right"><button class="btn btn-soft sm" (click)="trade(r.symbol); $event.stopPropagation()">{{ i18n.t().tradeNow }}</button></td>
+              </tr>
+            } @empty {
+              @for (i of [1, 2, 3, 4, 5]; track i) {
+                <tr><td colspan="5"><div class="skeleton" style="height: 22px"></div></td></tr>
+              }
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FEATURES ============ -->
+<section id="trading" class="section alt">
+  <div class="container">
+    <div class="section-head">
+      <span class="eyebrow">{{ i18n.t().whyTradersChoose }}</span>
+      <h2>{{ i18n.t().designedFromGroundUp }}</h2>
+    </div>
+    <div class="features">
+      @for (f of features(); track f.title) {
+        <article class="feature card">
+          <span class="f-ico"><app-icon [name]="f.icon" [size]="24" /></span>
+          <h3>{{ f.title }}</h3>
+          <p class="muted">{{ f.text }}</p>
+        </article>
+      }
+    </div>
+    <div class="stats">
+      <div><b>26</b><span>Instruments</span></div>
+      <div><b>$10,000</b><span>Free demo balance</span></div>
+      <div><b>5s – 4h</b><span>Trade durations</span></div>
+      <div><b>24/7</b><span>OTC trading</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PLATFORMS ============ -->
+<section id="platforms" class="section">
+  <div class="container platforms">
+    <div class="copy">
+      <span class="eyebrow">Platforms</span>
+      <h2>One terminal. Every screen.</h2>
+      <p class="muted">A fast web terminal that adapts from a 4K monitor to your phone. Classic mode for quick fixed-time trades, Pro mode with candlesticks, indicators and drawing tools, and CFD trading with stop-loss and take-profit.</p>
+      <ul class="checks">
+        <li><app-icon name="check" [size]="18" /> Classic and Pro chart modes</li>
+        <li><app-icon name="check" [size]="18" /> SMA, EMA and Bollinger indicators, trend lines</li>
+        <li><app-icon name="check" [size]="18" /> Install as an app on Android &amp; iOS (PWA)</li>
+        <li><app-icon name="check" [size]="18" /> Tick-by-tick replay of every trade you make</li>
+      </ul>
+      <button class="btn btn-brand pill lg" (click)="start('signup')">Try the demo</button>
+    </div>
+    <div class="device">
+      <div class="screen">
+        <div class="bar"><i></i><i></i><i></i></div>
+        <svg viewBox="0 0 400 200" preserveAspectRatio="none" class="mini-chart" aria-hidden="true">
+          <defs><linearGradient id="mcg" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#38BDF8" stop-opacity=".45" /><stop offset="1" stop-color="#38BDF8" stop-opacity="0" /></linearGradient></defs>
+          <path d="M0 150 L30 120 L55 135 L80 90 L110 110 L140 70 L170 95 L200 60 L230 80 L260 45 L290 70 L320 40 L350 55 L400 20 L400 200 L0 200Z" fill="url(#mcg)" />
+          <path class="line" d="M0 150 L30 120 L55 135 L80 90 L110 110 L140 70 L170 95 L200 60 L230 80 L260 45 L290 70 L320 40 L350 55 L400 20" fill="none" stroke="#38BDF8" stroke-width="3" />
+        </svg>
+        <div class="mock-panel">
+          <div class="mock-btn buy">BUY</div>
+          <div class="mock-btn ai">AI TRADING</div>
+          <div class="mock-btn sell">SELL</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PARTNERS ============ -->
+<section id="partners" class="section alt">
+  <div class="container">
+    <div class="partners card">
+      <div>
+        <span class="eyebrow">Partners</span>
+        <h2>Grow with us. Earn with every referral.</h2>
+        <p class="muted">Share your link and earn a commission on every deposit your referrals make, paid straight to your real account in real time.</p>
+      </div>
+      <ol class="steps">
+        <li><b>1</b><div><h4>Create an account</h4><p class="muted">It takes under a minute.</p></div></li>
+        <li><b>2</b><div><h4>Share your link</h4><p class="muted">Find it under Referrals in the terminal.</p></div></li>
+        <li><b>3</b><div><h4>Earn commission</h4><p class="muted">Tracked live with full statistics.</p></div></li>
+      </ol>
+      <button class="btn btn-brand pill lg" (click)="start('signup')">Become a partner</button>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FOOTER ============ -->
+<footer class="footer">
+  <div class="container">
+    <div class="f-top">
+      <div class="f-brand"><app-logo [size]="40" /><p class="muted">Where ambition meets opportunity.</p></div>
+      <div class="f-cols">
+        <div><h5>Trading</h5><a (click)="go('markets')">Markets</a><a (click)="start('signup')">Demo account</a><a routerLink="/app/tournaments">Tournaments</a></div>
+        <div><h5>Company</h5><a (click)="go('partners')">Partners</a><a routerLink="/app/help">Help centre</a><a href="mailto:support@y2markets.site">Contact</a></div>
+        <div><h5>Legal</h5><a routerLink="/legal/terms">Terms &amp; Conditions</a><a routerLink="/legal/privacy">Privacy Policy</a><a routerLink="/legal/risk">Risk Disclosure</a><a routerLink="/legal/aml">AML Policy</a></div>
+      </div>
+    </div>
+    <div class="risk">
+      <b>Risk warning:</b> Trading fixed-time contracts, CFDs and other leveraged or derivative products involves a high level of risk and may not be suitable for all investors.
+      You can lose all of the money you invest. Only trade with money you can afford to lose. OTC instruments are priced by Y2 Markets' own feed and are not quotes from
+      a public exchange; every OTC tick is recorded and each trade can be audited. Past performance is not indicative of future results. Services may not be available
+      in all jurisdictions; it is your responsibility to ensure trading is legal where you live.
+    </div>
+    <div class="copy muted">© {{ year }} Y2 Markets · y2markets.site</div>
+  </div>
+</footer>
+
+<!-- Floating scroll to top button -->
+<button class="scroll-top-btn" [class.visible]="scrolled()" (click)="scrollToTop()" aria-label="Scroll to top">
+  <app-icon name="arrow-up" [size]="20" [stroke]="2.6" />
+</button>

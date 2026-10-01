@@ -1,0 +1,19 @@
+// Y2 Markets design tokens. Components read the CSS custom properties; SCSS vars exist for mixins.
+$bg: #0f1420;
+$surface: #161c2a;
+$surface-2: #1c2436;
+$surface-3: #232c40;
+$text: #e6eaf2;
+$muted: #8a93a6;
+$brand-a: #2dd4bf;
+$brand-b: #38bdf8;
+$buy: #22c55e;
+$sell: #ef4444;
+$primary: #2f80ed;
+$radius: 12px;
+$ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+$bp-sm: 640px;
+$bp-md: 900px;
+$bp-lg: 1200px;
+

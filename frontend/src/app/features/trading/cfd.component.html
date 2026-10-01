@@ -1,0 +1,233 @@
+<div class="cfd" [class.bottom-collapsed]="!bottomOpen()" [class.fullscreen]="isFullscreen()">
+  <!-- ============ CHART ============ -->
+  <section class="chart-card">
+    <div class="tv-top">
+      <app-asset-selector [symbol]="ui.cfdSymbol()" mode="cfd" (selected)="ui.cfdSymbol.set($event)" />
+      <span class="sep"></span>
+      <div class="btn-group">
+        <button class="t" [class.on]="chartType() === 'bars'" (click)="chartType.set('bars')" title="Bars"><app-icon name="chart-bars" [size]="20" /></button>
+        <button class="t" [class.on]="chartType() === 'candles'" (click)="chartType.set('candles')" title="Candlesticks"><app-icon name="chart-candle" [size]="20" /></button>
+        <button class="t" [class.on]="chartType() === 'area'" (click)="chartType.set('area')" title="Area / Line"><app-icon name="chart-area" [size]="20" /></button>
+      </div>
+      <span class="sep"></span>
+      <div class="tf-group">
+        @for (x of [60, 300, 900, 3600]; track x) {
+          <button class="t tf" [class.on]="tf() === x" (click)="tf.set(x)">{{ x < 3600 ? x / 60 + 'm' : '1h' }}</button>
+        }
+      </div>
+      <span class="sep"></span>
+      <button class="t add-btn" title="Compare or Add Symbol"><app-icon name="plus" [size]="16" /></button>
+      <span class="sep"></span>
+      <div class="ind-wrap">
+        <button class="t ind-btn" (click)="indicatorsOpen.set(!indicatorsOpen())" [class.on]="indicatorsOpen() || ui.indicators().length">
+          <app-icon name="indicators" [size]="18" />
+          <span>Indicators</span>
+        </button>
+        @if (indicatorsOpen()) {
+          <div class="ind-menu anim-pop">
+            <button class="ind-row" [class.on]="ui.indicators().includes('sma')" (click)="ui.toggleIndicator('sma')">
+              <span class="sw" style="background:#F5B841"></span> SMA (Simple Moving Average)
+            </button>
+            <button class="ind-row" [class.on]="ui.indicators().includes('ema')" (click)="ui.toggleIndicator('ema')">
+              <span class="sw" style="background:#C084FC"></span> EMA (Exponential Moving Average)
+            </button>
+            <button class="ind-row" [class.on]="ui.indicators().includes('bb')" (click)="ui.toggleIndicator('bb')">
+              <span class="sw" style="background:#2DD4BF"></span> Bollinger Bands
+            </button>
+          </div>
+        }
+      </div>
+      <span class="spacer"></span>
+      <button class="t split-btn" (click)="toggleFullscreen()" title="Toggle full layout"><app-icon name="split" [size]="18" /></button>
+    </div>
+    <div class="tv-body">
+      <div class="tools">
+        <button [class.on]="ui.crosshair()" (click)="ui.crosshair.set(!ui.crosshair())" title="Crosshair"><app-icon name="crosshair" [size]="20" /></button>
+        <button [class.on]="tool() === 'trend'" (click)="tool.set(tool() === 'trend' ? 'none' : 'trend')" title="Trend line"><app-icon name="trend" [size]="20" /></button>
+        <button [class.on]="tool() === 'hline'" (click)="tool.set(tool() === 'hline' ? 'none' : 'hline')" title="Horizontal line"><app-icon name="hline" [size]="20" /></button>
+        <button title="Technical Tools"><app-icon name="pitchfork" [size]="20" /></button>
+        <button title="Brush / Drawing Tools"><app-icon name="brush" [size]="20" /></button>
+        <button title="Text annotation"><app-icon name="text" [size]="20" /></button>
+        <button title="Icons / Markers"><app-icon name="smile" [size]="20" /></button>
+        <button (click)="clear.set(clear() + 1); tool.set('none')" title="Clear drawings"><app-icon name="trash" [size]="20" /></button>
+        <div class="tv-rail-logo" title="TradingView Engine"><app-icon name="tv" [size]="22" /></div>
+      </div>
+      <div class="chart">
+        <div class="tv-legend">
+          <div class="legend-row">
+            <span class="asset-ico">{{ asset()?.icon || '₿' }}</span>
+            <span class="legend-title">{{ asset()?.name || 'Bitcoin / TetherUS' }} · {{ tf() >= 60 ? tf() / 60 : tf() + 's' }} · {{ asset()?.source === 'binance' ? 'Binance' : 'Y2 OTC' }}</span>
+            <span class="live-dot" [class.live]="asset()?.fresh"></span>
+            @if (activeOhlc(); as ohlc) {
+              <div class="ohlc-vals" [class.up]="ohlc.up" [class.down]="!ohlc.up">
+                <span class="item"><span class="k">O</span><span class="v">{{ ohlc.o }}</span></span>
+                <span class="item"><span class="k">H</span><span class="v">{{ ohlc.h }}</span></span>
+                <span class="item"><span class="k">L</span><span class="v">{{ ohlc.l }}</span></span>
+                <span class="item"><span class="k">C</span><span class="v">{{ ohlc.c }}</span></span>
+                <span class="chg">{{ ohlc.diff }} ({{ ohlc.pct }})</span>
+              </div>
+            }
+          </div>
+          <div class="vol-row">
+            <span class="vol-lbl">Vol · {{ asset()?.symbol?.slice(0, 3) || 'BTC' }}</span>
+            <span class="vol-val">{{ activeOhlc()?.vol || 47 }}</span>
+            <app-icon name="chevron-up" [size]="12" />
+          </div>
+        </div>
+        <app-chart
+          [symbol]="ui.cfdSymbol()"
+          [precision]="prec()"
+          [chartType]="chartType()"
+          [timeframe]="tf()"
+          [window]="600"
+          [indicators]="ui.indicators()"
+          [showExpiry]="false"
+          [expirySec]="0"
+          [crosshair]="ui.crosshair()"
+          [drawTool]="tool()"
+          [clearDrawings]="clear()"
+          [offsetMin]="offset()"
+          [showVolume]="true"
+          [priceLines]="priceLines()"
+          (crosshairCandle)="hoveredCandle.set($event)"
+        />
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ ORDER PANEL ============ -->
+  <aside class="order">
+    <div class="quotes">
+      <button class="q buy" [class.on]="side() === 'buy'" (click)="side.set('buy')"><span>BUY</span><b class="num">{{ price(ask(), prec()) }}</b></button>
+      <button class="q sell" [class.on]="side() === 'sell'" (click)="side.set('sell')"><span>SELL</span><b class="num">{{ price(bid(), prec()) }}</b></button>
+    </div>
+    <div class="otype">
+      <button [class.on]="orderType() === 'market'" (click)="orderType.set('market')">Market<br />Order</button>
+      <button [class.on]="orderType() === 'limit'" (click)="orderType.set('limit'); limitPrice.set(mid())">By Price<br />Order</button>
+    </div>
+    @if (orderType() === 'limit') {
+      <label class="lbl">Open at price</label>
+      <input class="input num" type="number" step="any" [ngModel]="limitPrice()" (ngModelChange)="limitPrice.set($event)" />
+    }
+    <div class="lots-h"><span>Volume of a trade in lots</span><b class="num">{{ money(margin()) }}</b></div>
+    <div class="lots">
+      <button (click)="stepLots(-0.01)" aria-label="Less"><app-icon name="minus" [size]="18" /></button>
+      <input class="num" type="number" step="0.01" min="0.01" [ngModel]="lots()" (ngModelChange)="lots.set(+$event || 0.01)" />
+      <button (click)="stepLots(0.01)" aria-label="More"><app-icon name="plus" [size]="18" /></button>
+    </div>
+    <div class="cond">
+      <button class="cond-h" (click)="conditionsOpen.set(!conditionsOpen())">Conditions for closing a trade <app-icon [name]="conditionsOpen() ? 'chevron-up' : 'chevron-down'" [size]="16" /></button>
+      @if (conditionsOpen()) {
+        <div class="cond-b anim-rise">
+          <label class="row"><span class="switch sm"><input type="checkbox" [ngModel]="useTp()" (ngModelChange)="useTp.set($event); tp.set(tp() ?? mid())" /><span></span></span> Take profit</label>
+          @if (useTp()) { <input class="input sm num" type="number" step="any" [ngModel]="tp()" (ngModelChange)="tp.set($event)" /> }
+          <label class="row"><span class="switch sm"><input type="checkbox" [ngModel]="useSl()" (ngModelChange)="useSl.set($event); sl.set(sl() ?? mid())" /><span></span></span> Stop loss</label>
+          @if (useSl()) { <input class="input sm num" type="number" step="any" [ngModel]="sl()" (ngModelChange)="sl.set($event)" /> }
+          <small class="muted">Leverage 1:{{ asset()?.cfd?.leverage }} · Positions auto-close if losses reach 95% of margin.</small>
+        </div>
+      }
+    </div>
+    <button class="go" [class.sell]="side() === 'sell'" (click)="submit()" [disabled]="busy() || !mid()">
+      <app-icon [name]="side() === 'buy' ? 'arrow-ur' : 'arrow-dr'" [size]="26" [stroke]="2.4" /> {{ side() === 'buy' ? 'BUY' : 'SELL' }}
+    </button>
+    <button class="ai" (click)="autoTrade()"><span class="ai-b">AI</span> AI Auto Trade</button>
+    @if (ai(); as s) {
+      <div class="ai-card anim-pop" [class.up]="s.direction === 'up'">
+        <b>{{ s.direction === 'up' ? 'BUY' : 'SELL' }} · {{ s.confidence }}%</b><small>{{ s.reason }}</small>
+        <button class="btn sm block" [class.btn-buy]="s.direction === 'up'" [class.btn-sell]="s.direction === 'down'" (click)="followAi()">Open {{ lots() }} lot</button>
+      </div>
+    }
+  </aside>
+
+  <!-- ============ POSITIONS ============ -->
+  <section class="bottom">
+    <div class="b-head">
+      <button [class.on]="tab() === 'positions'" (click)="tab.set('positions'); bottomOpen.set(true)"><app-icon name="chart-bars" [size]="18" /> Positions @if (positions().length) { <i>{{ positions().length }}</i> }</button>
+      <button [class.on]="tab() === 'orders'" (click)="tab.set('orders'); bottomOpen.set(true)"><app-icon name="pending" [size]="18" /> Orders @if (orders().length) { <i>{{ orders().length }}</i> }</button>
+      <button [class.on]="tab() === 'history'" (click)="tab.set('history'); bottomOpen.set(true)"><app-icon name="history" [size]="18" /> History</button>
+      <span class="spacer"></span>
+      <span class="time">CURRENT TIME: {{ timeText() }}</span>
+      <button class="collapse" (click)="bottomOpen.set(!bottomOpen())"><app-icon [name]="bottomOpen() ? 'chevron-down' : 'chevron-up'" [size]="18" /></button>
+    </div>
+    @if (bottomOpen()) {
+      <div class="b-body">
+        @switch (tab()) {
+          @case ('positions') {
+            @if (positions().length) {
+              <div class="table-wrap">
+                <table class="table">
+                  <thead><tr><th>Asset</th><th>Side</th><th>Lots</th><th>Open</th><th>Current</th><th>SL / TP</th><th>Margin</th><th>P/L</th><th></th></tr></thead>
+                  <tbody>
+                    @for (p of positions(); track p.id) {
+                      <tr>
+                        <td>{{ p.symbol }}</td>
+                        <td><span class="badge" [class.green]="p.side === 'buy'" [class.red]="p.side === 'sell'">{{ p.side }}</span></td>
+                        <td class="num">{{ p.lots }}</td>
+                        <td class="num">{{ price(p.openPrice, prec()) }}</td>
+                        <td class="num">{{ price(market.price(p.symbol)(), prec()) }}</td>
+                        <td class="num muted">{{ p.sl ?? '—' }} / {{ p.tp ?? '—' }}</td>
+                        <td class="num">{{ money(p.margin) }}</td>
+                        <td class="num" [class.up-text]="(livePnl().get(p.id) ?? 0) > 0" [class.down-text]="(livePnl().get(p.id) ?? 0) < 0"><b>{{ signed(livePnl().get(p.id) ?? 0) }}</b></td>
+                        <td><button class="btn btn-soft sm" (click)="close(p)">Close</button></td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            } @else {
+              <div class="empty">No open positions</div>
+            }
+          }
+          @case ('orders') {
+            @if (orders().length) {
+              <div class="table-wrap">
+                <table class="table">
+                  <thead><tr><th>Asset</th><th>Side</th><th>Lots</th><th>Limit price</th><th>Placed</th><th></th></tr></thead>
+                  <tbody>
+                    @for (o of orders(); track o.id) {
+                      <tr><td>{{ o.symbol }}</td><td><span class="badge" [class.green]="o.side === 'buy'" [class.red]="o.side === 'sell'">{{ o.side }}</span></td>
+                        <td class="num">{{ o.lots }}</td><td class="num">{{ price(o.limitPrice, prec()) }}</td><td>{{ dt(o.createdAt) }}</td>
+                        <td><button class="btn btn-soft sm" (click)="cancelOrder(o)">Cancel</button></td></tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            } @else {
+              <div class="empty">No pending orders</div>
+            }
+          }
+          @case ('history') {
+            @if (history().length) {
+              <div class="table-wrap">
+                <table class="table">
+                  <thead><tr><th>Asset</th><th>Side</th><th>Lots</th><th>Open</th><th>Close</th><th>Reason</th><th>Closed</th><th>P/L</th></tr></thead>
+                  <tbody>
+                    @for (p of history(); track p.id) {
+                      <tr><td>{{ p.symbol }}</td><td>{{ p.side }}</td><td class="num">{{ p.lots }}</td><td class="num">{{ price(p.openPrice, prec()) }}</td>
+                        <td class="num">{{ price(p.closePrice, prec()) }}</td><td class="muted">{{ p.closeReason }}</td><td>{{ dt(p.closedAt) }}</td>
+                        <td class="num" [class.up-text]="p.pnl > 0" [class.down-text]="p.pnl < 0"><b>{{ signed(p.pnl) }}</b></td></tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            } @else {
+              <div class="empty">No closed positions yet</div>
+            }
+          }
+        }
+      </div>
+    }
+    <div class="b-foot">
+      <span>Balance: <b class="num">{{ money(totals().balance) }}</b></span>
+      <span>Equity: <b class="num">{{ money(totals().equity) }}</b></span>
+      <span>Margin: <b class="num">{{ money(totals().margin) }}</b></span>
+      <span>Free margin: <b class="num">{{ money(totals().free) }}</b></span>
+      <span>Margin level: <b class="num">{{ totals().level.toFixed(2) }}%</b></span>
+      <span>Net P/L: <b class="num" [class.up-text]="totals().pnl > 0" [class.down-text]="totals().pnl < 0">{{ signed(totals().pnl) }}</b></span>
+      <span class="spacer"></span>
+      <button class="ca red" (click)="closeAll('losing')" [disabled]="!positions().length">Close all losing positions</button>
+      <button class="ca green" (click)="closeAll('winning')" [disabled]="!positions().length">Close all winning positions</button>
+      <button class="ca red" (click)="closeAll('all')" [disabled]="!positions().length">Close all positions</button>
+    </div>
+  </section>
+</div>

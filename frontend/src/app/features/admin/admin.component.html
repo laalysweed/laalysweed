@@ -1,0 +1,539 @@
+<aside class="side" [class.open]="navOpen()">
+  <div class="side-head">
+    <a routerLink="/app/trading" class="brand"><app-logo [size]="34" /><span class="tag">Admin</span></a>
+    <button class="icon-btn side-close" (click)="navOpen.set(false)" aria-label="Close menu"><app-icon name="close" [size]="18" /></button>
+  </div>
+  <div class="side-links">
+    @for (t of tabs; track t.id) {
+      <button [class.on]="tab() === t.id" (click)="go(t.id)"><app-icon [name]="t.icon" [size]="20" /> {{ t.label }}</button>
+    }
+  </div>
+  <a routerLink="/app/trading" class="back-link"><app-icon name="chevron-left" [size]="18" /> Back to terminal</a>
+</aside>
+
+@if (navOpen()) {
+  <div class="side-backdrop anim-fade" (click)="navOpen.set(false)"></div>
+}
+
+<main>
+  <header class="top">
+    <button class="icon-btn burger" (click)="navOpen.set(!navOpen())" aria-label="Toggle menu"><app-icon name="menu" /></button>
+    <h1>{{ tabLabel() }}</h1>
+    <span class="spacer"></span>
+    <span class="muted user-email">{{ auth.user()?.email }}</span>
+    <a class="btn btn-buy sm to-trading" routerLink="/app/trading" aria-label="Back to trading"><app-icon name="chevron-left" [size]="16" /> Trading</a>
+  </header>
+
+  @switch (tab()) {
+    <!-- ================= DASHBOARD ================= -->
+    @case ('dashboard') {
+      @if (stats(); as s) {
+        <div class="kpis stagger">
+          <div class="kpi"><span>Users</span><b>{{ s['users'] }}</b><small>+{{ s['usersToday'] }} today</small></div>
+          <div class="kpi"><span>Deposits today</span><b>{{ money(s['depositsToday']) }}</b><small>{{ money(s['depositsTotal']) }} all time</small></div>
+          <div class="kpi"><span>Withdrawals paid</span><b>{{ money(s['withdrawalsPaid']) }}</b></div>
+          <div class="kpi"><span>Client cash (real)</span><b>{{ money(s['clientCash']) }}</b><small>{{ money(s['clientBonus']) }} bonus</small></div>
+          <div class="kpi"><span>Client trading P/L (real)</span><b [class.up-text]="s['clientTradingPnl'] > 0" [class.down-text]="s['clientTradingPnl'] < 0">{{ signed(s['clientTradingPnl']) }}</b></div>
+          <div class="kpi"><span>Open trades</span><b>{{ s['openTrades'] }}</b></div>
+          <div class="kpi warn" (click)="go('withdrawals')"><span>Withdrawals to review</span><b>{{ s['pendingWithdrawals'] }}</b></div>
+          <div class="kpi warn" (click)="go('deposits')"><span>Deposits to review</span><b>{{ s['pendingDeposits'] }}</b></div>
+          <div class="kpi warn" (click)="go('kyc')"><span>KYC pending</span><b>{{ s['kycPending'] }}</b></div>
+        </div>
+      }
+      <div class="feed-head"><h3><span class="live-dot"></span> Recent deposits</h3><button class="btn btn-soft sm" (click)="go('deposits')">View all</button></div>
+      <div class="panel feed">
+        @for (d of recentDeposits(); track d.id) {
+          <div class="feed-row anim-rise">
+            <span class="f-ico" [attr.data-s]="d.status"><app-icon [name]="d.status === 'completed' ? 'check' : d.status === 'failed' || d.status === 'cancelled' ? 'close' : 'clock'" [size]="16" /></span>
+            <div class="f-main"><b>{{ d.username ?? 'user' }}</b><small class="muted">{{ methodLabel(d.method) }}{{ d.failureReason ? ' · ' + d.failureReason : '' }}</small></div>
+            <div class="f-side"><b class="num">{{ money(d.amount) }}</b><span class="badge" [class]="tone(d.status)">{{ statusLabel(d.status) }}</span></div>
+          </div>
+        } @empty {
+          <div class="empty">No deposits yet. They appear here the moment they happen.</div>
+        }
+      </div>
+    }
+
+    <!-- ================= USERS ================= -->
+    @case ('users') {
+      <div class="toolbar"><input class="input sm" placeholder="Search username or e-mail" [ngModel]="userQ()" (ngModelChange)="userQ.set($event)" (keyup.enter)="searchUsers()" /><button class="btn btn-primary sm" (click)="searchUsers()">Search</button><span class="muted">{{ users().total }} users</span></div>
+      <div class="panel table-wrap">
+        <table class="table">
+          <thead><tr><th>User</th><th>E-mail</th><th>Real cash</th><th>KYC</th><th>Role</th><th>Status</th><th>Joined</th></tr></thead>
+          <tbody>
+            @for (u of users().rows; track u.id) {
+              <tr class="click" (click)="openUser(u.id)">
+                <td><b>{{ u.username }}</b><br /><small class="muted">{{ u.fullName }}</small></td>
+                <td>{{ u.email }} @if (u.emailVerified) { <span class="up-text">✓</span> }</td>
+                <td class="num">{{ money(u.real?.balance ?? 0) }}</td>
+                <td><span class="badge" [class]="u.kycStatus === 'approved' ? 'green' : u.kycStatus === 'pending' ? 'amber' : ''">{{ u.kycStatus }}</span></td>
+                <td>{{ u.role }}</td>
+                <td><span class="badge" [class.red]="u.blocked" [class.green]="!u.blocked">{{ u.blocked ? 'blocked' : 'active' }}</span></td>
+                <td>{{ dt(u.createdAt) }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+
+    <!-- ================= KYC ================= -->
+    @case ('kyc') {
+      <div class="toolbar"><input class="input sm" placeholder="Note for the user (required to reject)" [ngModel]="kycNote()" (ngModelChange)="kycNote.set($event)" /></div>
+      @for (k of kyc(); track k.user.id) {
+        <div class="panel kyc-card">
+          <div class="row"><b>{{ k.user.fullName }}</b><span class="muted">&#64;{{ k.user.username }} · {{ k.user.email }} · {{ k.user.country }}</span><span class="spacer"></span>
+            <button class="btn btn-buy sm" (click)="reviewKyc(k.user.id, 'approved')" [disabled]="busy()">Approve</button>
+            <button class="btn btn-sell sm" (click)="reviewKyc(k.user.id, 'rejected')" [disabled]="busy()">Reject</button></div>
+          <div class="docs">@for (d of k.documents; track d.id) { <button class="btn btn-soft sm" (click)="viewDoc(d.id, d.mime)"><app-icon name="file" [size]="16" /> {{ d.docType }}</button> }</div>
+        </div>
+      } @empty { <div class="empty">No KYC submissions waiting 🎉</div> }
+    }
+
+    <!-- ================= DEPOSITS ================= -->
+    @case ('deposits') {
+      <div class="toolbar">
+        <select class="input sm" [ngModel]="depStatus()" (ngModelChange)="depStatus.set($event); go('deposits')">
+          <option value="">All deposits</option><option value="awaiting_review">Awaiting review</option><option value="pending">Pending</option><option value="processing">Processing</option><option value="completed">Completed</option><option value="cancelled">Cancelled</option><option value="failed">Failed</option>
+        </select>
+        <input class="input sm" placeholder="Rejection note" [ngModel]="note()" (ngModelChange)="note.set($event)" />
+      </div>
+      <div class="panel table-wrap">
+        <table class="table">
+          <thead><tr><th>Date</th><th>User</th><th>Method</th><th>Amount</th><th>Reference</th><th>Status</th><th></th></tr></thead>
+          <tbody>
+            @for (d of deposits(); track d.id) {
+              <tr>
+                <td>{{ dt(d.createdAt) }}</td><td>{{ d.username }}<br /><small class="muted">{{ d.email }}</small></td><td>{{ methodLabel(d.method) }}</td>
+                <td class="num">{{ money(d.amount) }}@if (d.localCurrency === 'KES') { <br /><small class="muted">KES {{ d.localAmount }}</small> }</td>
+                <td class="mono">{{ d.txHash ?? d.receipt ?? '—' }}</td>
+                <td><span class="badge" [class]="tone(d.status)">{{ statusLabel(d.status) }}</span></td>
+                <td class="actions">@if (d.status === 'awaiting_review' || d.status === 'pending') {
+                  <button class="btn btn-buy sm" (click)="depositAction(d, 'approve')" [disabled]="busy()">Approve</button>
+                  <button class="btn btn-sell sm" (click)="depositAction(d, 'reject')" [disabled]="busy()">Reject</button> }</td>
+              </tr>
+            } @empty { <tr><td colspan="7"><div class="empty">Nothing here</div></td></tr> }
+          </tbody>
+        </table>
+      </div>
+    }
+
+    <!-- ================= WITHDRAWALS ================= -->
+    @case ('withdrawals') {
+      <div class="panel popup-config-panel">
+        <div class="panel-header-row">
+          <div>
+            <h3>Global Withdrawal Popup</h3>
+            <p class="muted">Configured popup shown to all users whenever they click or access Withdrawal (unless overridden by a custom user popup).</p>
+          </div>
+          <label class="switch-lbl">
+            <span class="switch"><input type="checkbox" [ngModel]="globalPopup().enabled" (ngModelChange)="updateGlobalPopup('enabled', $event)" /><span></span></span>
+            <b>{{ globalPopup().enabled ? 'Active (Enabled)' : 'Disabled' }}</b>
+          </label>
+        </div>
+
+        <div class="popup-form-grid">
+          <div class="field">
+            <label>Popup Title</label>
+            <input class="input sm" placeholder="e.g. Important Withdrawal Notice" [ngModel]="globalPopup().title" (ngModelChange)="updateGlobalPopup('title', $event)" />
+          </div>
+          <div class="field">
+            <label>Tone / Style</label>
+            <select class="input sm" [ngModel]="globalPopup().type" (ngModelChange)="updateGlobalPopup('type', $event)">
+              @for (t of popupTypes; track t.id) { <option [value]="t.id">{{ t.label }}</option> }
+            </select>
+          </div>
+          <div class="field span-2">
+            <label>Popup Message (supports line breaks)</label>
+            <textarea class="input" rows="3" placeholder="Enter message shown to users..." [ngModel]="globalPopup().message" (ngModelChange)="updateGlobalPopup('message', $event)"></textarea>
+          </div>
+          <div class="field">
+            <label>Button Label</label>
+            <input class="input sm" placeholder="e.g. Understood, Contact Support" [ngModel]="globalPopup().buttonText" (ngModelChange)="updateGlobalPopup('buttonText', $event)" />
+          </div>
+          <div class="field">
+            <label>Button Action</label>
+            <select class="input sm" [ngModel]="globalPopup().buttonAction" (ngModelChange)="updateGlobalPopup('buttonAction', $event)">
+              @for (a of popupActions; track a.id) { <option [value]="a.id">{{ a.label }}</option> }
+            </select>
+          </div>
+          <div class="field span-2 checkbox-row">
+            <label class="checkbox">
+              <input type="checkbox" [ngModel]="globalPopup().blocking" (ngModelChange)="updateGlobalPopup('blocking', $event)" />
+              <span><b>Strict Blocking Mode:</b> Prevent users from submitting withdrawals while this popup is active.</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="panel-actions">
+          <button class="btn btn-primary sm" (click)="saveGlobalPopup()" [disabled]="busy()">Save Global Popup</button>
+          <button class="btn btn-soft sm" (click)="previewPopup.set(globalPopup())">Preview Popup</button>
+        </div>
+      </div>
+
+      <div class="toolbar">
+        <select class="input sm" [ngModel]="wStatus()" (ngModelChange)="wStatus.set($event); go('withdrawals')">
+          <option value="pending_review">Pending review</option><option value="processing">Processing</option><option value="paid">Paid</option><option value="rejected">Rejected</option><option value="failed">Failed</option><option value="">All</option>
+        </select>
+        <input class="input sm" placeholder="Rejection note" [ngModel]="note()" (ngModelChange)="note.set($event)" />
+        <input class="input sm" placeholder="Payout tx ref (USDT)" [ngModel]="txRef()" (ngModelChange)="txRef.set($event)" />
+      </div>
+      <div class="panel table-wrap">
+        <table class="table">
+          <thead><tr><th>Date</th><th>User</th><th>Checks</th><th>Method</th><th>Amount</th><th>Destination</th><th>Status</th><th></th></tr></thead>
+          <tbody>
+            @for (w of withdrawals(); track w.id) {
+              <tr>
+                <td>{{ dt(w.createdAt) }}</td><td>{{ w.username }}<br /><small class="muted">{{ w.email }}</small></td>
+                <td><span class="badge" [class.green]="w.emailVerified">e-mail</span> <span class="badge" [class.green]="w.kycStatus === 'approved'">KYC</span></td>
+                <td>{{ methodLabel(w.method) }}</td><td class="num">{{ money(w.amount) }}</td>
+                <td class="mono">{{ w.phone ?? w.address }}</td>
+                <td><span class="badge" [class]="tone(w.status)">{{ statusLabel(w.status) }}</span></td>
+                <td class="actions">
+                  @if (w.status === 'pending_review') {
+                    <button class="btn btn-buy sm" (click)="wAction(w, 'approve')" [disabled]="busy()">Approve</button>
+                    <button class="btn btn-sell sm" (click)="wAction(w, 'reject')" [disabled]="busy()">Reject</button>
+                  }
+                  @if (w.status === 'processing') { <button class="btn btn-primary sm" (click)="wAction(w, 'mark-paid')" [disabled]="busy()">Mark paid</button> }
+                </td>
+              </tr>
+            } @empty { <tr><td colspan="8"><div class="empty">Nothing here</div></td></tr> }
+          </tbody>
+        </table>
+      </div>
+    }
+
+    <!-- ================= ASSETS ================= -->
+    @case ('assets') {
+      <p class="muted">Payout % is the profit paid on a winning fixed-time trade. OTC price generation parameters are intentionally not editable here.</p>
+      <div class="panel table-wrap">
+        <table class="table">
+          <thead><tr><th>Asset</th><th>Source</th><th>Price</th><th>Enabled</th><th>Payout %</th><th>Min $</th><th>Max $</th><th>CFD</th><th></th></tr></thead>
+          <tbody>
+            @for (a of assets(); track a.symbol) {
+              <tr>
+                <td><b>{{ a.name }}</b><br /><small class="muted">{{ a.symbol }}</small></td>
+                <td><span class="badge" [class.blue]="a.source === 'binance'">{{ a.source }}</span> <span class="dot" [class.live]="a.fresh"></span></td>
+                <td class="num">{{ price(a.price, a.precision) }}</td>
+                <td><span class="switch"><input type="checkbox" [(ngModel)]="a.enabled" /><span></span></span></td>
+                <td><input class="input sm w70" type="number" min="10" max="100" [(ngModel)]="a.payout" /></td>
+                <td><input class="input sm w90" type="number" [ngModel]="a.minTradeCents / 100" (ngModelChange)="a.minTradeCents = $event * 100" /></td>
+                <td><input class="input sm w90" type="number" [ngModel]="a.maxTradeCents / 100" (ngModelChange)="a.maxTradeCents = $event * 100" /></td>
+                <td>@if (a.cfd) { <span class="switch"><input type="checkbox" [(ngModel)]="a.cfd.enabled" /><span></span></span> <small class="muted">1:{{ a.cfd.leverage }}</small> }</td>
+                <td><button class="btn btn-primary sm" (click)="saveAsset(a)" [disabled]="busy()">Save</button></td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+
+    <!-- ================= BONUSES ================= -->
+    @case ('crypto') {
+      <div class="panel limits">
+        <h3>Deposit &amp; withdrawal limits</h3>
+        <p class="muted">Applies to every payment method. Users see new limits immediately, even on an open deposit page.</p>
+        <div class="limit-grid">
+          <label>Minimum deposit (USD)<div class="money-in"><span>$</span><input type="number" min="0.01" step="0.01" [ngModel]="limits().minDeposit" (ngModelChange)="setLimit('minDeposit', $event)" /></div></label>
+          <label>Maximum deposit (USD)<div class="money-in"><span>$</span><input type="number" min="0.01" step="0.01" [ngModel]="limits().maxDeposit" (ngModelChange)="setLimit('maxDeposit', $event)" /></div></label>
+          <label>Minimum withdrawal (USD)<div class="money-in"><span>$</span><input type="number" min="1" step="1" [ngModel]="limits().minWithdrawal" (ngModelChange)="setLimit('minWithdrawal', $event)" /></div></label>
+        </div>
+        <button class="btn btn-primary" (click)="saveLimits()" [disabled]="busy() || !(limits().minDeposit >= 0.01) || limits().maxDeposit < limits().minDeposit || limits().minWithdrawal < 1">Save limits</button>
+      </div>
+
+      <h3 class="sec-title">Crypto wallets</h3>
+      <p class="muted">These addresses are shown to users (with a QR code) when they deposit with crypto. Only coins that are <b>enabled</b> and have an address appear.
+        Double-check each address and network: funds sent to a wrong address cannot be recovered. Deposits are credited when you approve them under <b>Deposits</b>.</p>
+      <div class="wallets">
+        @for (w of wallets(); track $index; let i = $index) {
+          <div class="panel wallet">
+            <div class="w-row">
+              <label>Coin <input class="input sm" [ngModel]="w.coin" (ngModelChange)="editWallet(i, 'coin', $event)" /></label>
+              <label>Name <input class="input sm" [ngModel]="w.name" (ngModelChange)="editWallet(i, 'name', $event)" /></label>
+              <label>Network <input class="input sm" [ngModel]="w.network" (ngModelChange)="editWallet(i, 'network', $event)" /></label>
+            </div>
+            <label class="w-addr">Deposit address
+              <input class="input sm mono-in" placeholder="Paste your {{ w.coin }} address on {{ w.network }}" [ngModel]="w.address" (ngModelChange)="editWallet(i, 'address', $event)" />
+            </label>
+            <div class="w-row end">
+              <label class="toggle"><span class="switch"><input type="checkbox" [ngModel]="w.enabled" (ngModelChange)="editWallet(i, 'enabled', $event)" /><span></span></span> Enabled</label>
+              <label class="toggle"><span class="switch"><input type="checkbox" [ngModel]="w.popular" (ngModelChange)="editWallet(i, 'popular', $event)" /><span></span></span> "Most popular" badge</label>
+              <span class="spacer"></span>
+              @if (w.enabled && !w.address) { <span class="badge amber">Hidden until an address is added</span> }
+              <button class="btn btn-soft sm" (click)="removeWallet(i)">Remove</button>
+            </div>
+          </div>
+        }
+      </div>
+      <div class="row">
+        <button class="btn btn-ghost" (click)="addWallet()">+ Add coin</button>
+        <button class="btn btn-primary" (click)="saveWallets()" [disabled]="busy()">Save wallets</button>
+      </div>
+    }
+
+    @case ('bonuses') {
+      <div class="panel bonus-card">
+        <div class="bonus-header">
+          <div class="bonus-title-info">
+            <span class="badge blue">JSON Config</span>
+            <span class="muted info-hint">Amounts in cents (1000 = $10.00). Bump <code>termsVersion</code> to invalidate prior opt-ins.</span>
+          </div>
+          <div class="bonus-actions">
+            <button class="btn btn-soft sm" (click)="formatBonusJson()" type="button" title="Format JSON">
+              <app-icon name="code" [size]="15" /> Format JSON
+            </button>
+            <button class="btn btn-buy sm" (click)="saveBonuses()" [disabled]="busy()" type="button">
+              @if (busy()) { <span class="spinner sm"></span> Saving... } @else { <app-icon name="check" [size]="15" /> Save configuration }
+            </button>
+          </div>
+        </div>
+
+        <div class="code-editor-wrap">
+          <textarea class="code-textarea" [ngModel]="bonusJson()" (ngModelChange)="bonusJson.set($event)" spellcheck="false" placeholder="Enter bonus configuration JSON..."></textarea>
+        </div>
+
+        <div class="bonus-footer">
+          <span class="muted small-note">Trader's Box odds shown to users are derived dynamically from reward weights.</span>
+          <button class="btn btn-buy sm" (click)="saveBonuses()" [disabled]="busy()" type="button">
+            @if (busy()) { <span class="spinner sm"></span> Saving... } @else { Save configuration }
+          </button>
+        </div>
+      </div>
+    }
+
+    <!-- ================= LEDGER ================= -->
+    @case ('ledger') {
+      <div class="toolbar">
+        <input class="input sm" placeholder="User id" [ngModel]="ledgerFilter().userId" (ngModelChange)="setLedger('userId', $event)" />
+        <select class="input sm" [ngModel]="ledgerFilter().type" (ngModelChange)="setLedger('type', $event)">
+          <option value="">All types</option>
+          @for (t of ['deposit', 'withdrawal_hold', 'withdrawal_reversal', 'trade_open', 'trade_payout', 'trade_refund', 'cfd_margin', 'cfd_close', 'bonus_credit', 'bonus_cancel', 'bonus_convert', 'box_reward', 'referral_commission', 'tournament_fee', 'tournament_prize', 'admin_adjust', 'demo_credit', 'demo_reset']; track t) { <option [value]="t">{{ t }}</option> }
+        </select>
+        <select class="input sm" [ngModel]="ledgerFilter().accountType" (ngModelChange)="setLedger('accountType', $event)"><option value="">All accounts</option><option value="real">Real</option><option value="demo">Demo</option><option value="tournament">Tournament</option></select>
+        <button class="btn btn-primary sm" (click)="loadLedger()">Filter</button><span class="muted">{{ ledger().total }} entries</span>
+      </div>
+      <div class="panel table-wrap">
+        <table class="table">
+          <thead><tr><th>Time</th><th>User</th><th>Account</th><th>Type</th><th>Bucket</th><th>Amount</th><th>Balance after</th><th>Ref</th><th>Note</th></tr></thead>
+          <tbody>
+            @for (l of ledger().rows; track l.id) {
+              <tr><td>{{ dt(l.createdAt) }}</td><td>{{ l.username }}</td><td>{{ l.accountType }}</td><td><code>{{ l.type }}</code></td><td>{{ l.bucket }}</td>
+                <td class="num" [class.up-text]="l.amount > 0" [class.down-text]="l.amount < 0">{{ signed(l.amount) }}</td><td class="num">{{ money(l.balanceAfter) }}</td>
+                <td class="mono">@if (l.refKind === 'trade' && l.refId) { <a (click)="openAudit(l.refId)">trade {{ l.refId.slice(-6) }}</a> } @else { {{ l.refKind }} {{ l.refId?.slice(-6) }} }</td>
+                <td class="muted">{{ l.note }}</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+
+    <!-- ================= TRADES ================= -->
+    @case ('trades') {
+      <div class="toolbar">
+        <input class="input sm" placeholder="User id" [ngModel]="tradeFilter().userId" (ngModelChange)="setTradeF('userId', $event)" />
+        <input class="input sm" placeholder="Symbol" [ngModel]="tradeFilter().symbol" (ngModelChange)="setTradeF('symbol', $event)" />
+        <select class="input sm" [ngModel]="tradeFilter().status" (ngModelChange)="setTradeF('status', $event)"><option value="">Any status</option><option value="open">Open</option><option value="won">Won</option><option value="lost">Lost</option><option value="draw">Draw</option></select>
+        <select class="input sm" [ngModel]="tradeFilter().accountType" (ngModelChange)="setTradeF('accountType', $event)"><option value="">All accounts</option><option value="real">Real</option><option value="demo">Demo</option><option value="tournament">Tournament</option></select>
+        <button class="btn btn-primary sm" (click)="loadTrades()">Filter</button><span class="muted">{{ trades().total }} trades</span>
+      </div>
+      <div class="panel table-wrap">
+        <table class="table">
+          <thead><tr><th>Opened</th><th>User</th><th>Asset</th><th>Dir</th><th>Amount</th><th>Open</th><th>Close</th><th>Status</th><th>P/L</th><th></th></tr></thead>
+          <tbody>
+            @for (t of trades().rows; track t.id) {
+              <tr><td>{{ dt(t.openedAt) }}</td><td>{{ t.username }}</td><td>{{ t.symbol }}</td><td>{{ t.direction === 'up' ? '▲' : '▼' }}</td><td class="num">{{ money(t.amount) }}</td>
+                <td class="num">{{ t.openPrice }}</td><td class="num">{{ t.closePrice ?? '—' }}</td><td><span class="badge" [class]="tone(t.status)">{{ t.status }}</span></td>
+                <td class="num" [class.up-text]="t.profit > 0" [class.down-text]="t.profit < 0">{{ signed(t.profit) }}</td>
+                <td><button class="btn btn-soft sm" (click)="openAudit(t.id)">Audit</button></td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+
+    <!-- ================= CHAT ================= -->
+    @case ('chat') {
+      <div class="chat">
+        <div class="convos">
+          @for (c of convos(); track c.userId) {
+            <button [class.on]="chatUser()?.userId === c.userId" (click)="openChat(c)">
+              <b>{{ c.username }}</b>@if (c.unread) { <i>{{ c.unread }}</i> }<small>{{ c.last.text }}</small>
+            </button>
+          } @empty { <div class="empty">No conversations</div> }
+        </div>
+        <div class="thread">
+          @if (chatUser(); as cu) {
+            <header><b>{{ cu.fullName }}</b> <span class="muted">&#64;{{ cu.username }}</span></header>
+            <div class="msgs">
+              @for (m of chatMsgs(); track m.id) { <div class="msg" [class.me]="m.from === 'support'"><p>{{ m.text }}</p><time>{{ dt(m.createdAt) }}</time></div> }
+            </div>
+            <form (ngSubmit)="sendReply()"><input class="input" placeholder="Reply as Y2 Support…" [ngModel]="reply()" (ngModelChange)="reply.set($event)" name="r" /><button class="btn btn-primary" type="submit">Send</button></form>
+          } @else { <div class="empty">Select a conversation</div> }
+        </div>
+      </div>
+    }
+
+    <!-- ================= TOURNAMENTS ================= -->
+    @case ('tournaments') {
+      <div class="panel form-grid">
+        <h3>New tournament</h3>
+        <input class="input sm" placeholder="Name" [ngModel]="tForm().name" (ngModelChange)="setT('name', $event)" />
+        <input class="input sm" placeholder="Description" [ngModel]="tForm().description" (ngModelChange)="setT('description', $event)" />
+        <label>Starts <input class="input sm" type="datetime-local" [ngModel]="tForm().startsAt" (ngModelChange)="setT('startsAt', $event)" /></label>
+        <label>Ends <input class="input sm" type="datetime-local" [ngModel]="tForm().endsAt" (ngModelChange)="setT('endsAt', $event)" /></label>
+        <label>Entry fee $ <input class="input sm" type="number" [ngModel]="tForm().entryFee" (ngModelChange)="setT('entryFee', $event)" /></label>
+        <label>Start balance $ <input class="input sm" type="number" [ngModel]="tForm().startingBalance" (ngModelChange)="setT('startingBalance', $event)" /></label>
+        <label>Prizes $ (comma separated) <input class="input sm" [ngModel]="tForm().prizes" (ngModelChange)="setT('prizes', $event)" /></label>
+        <button class="btn btn-primary" (click)="createTournament()" [disabled]="busy()">Create</button>
+      </div>
+      <div class="panel table-wrap">
+        <table class="table">
+          <thead><tr><th>Name</th><th>Status</th><th>Starts</th><th>Ends</th><th>Entry</th><th>Prize pool</th><th></th></tr></thead>
+          <tbody>
+            @for (t of tournaments(); track t.id) {
+              <tr><td>{{ t.name }}</td><td><span class="badge">{{ t.status }}</span></td><td>{{ dt(t.startsAt) }}</td><td>{{ dt(t.endsAt) }}</td><td>{{ money(t.entryFee) }}</td><td>{{ money(t.prizePool) }}</td>
+                <td>@if (t.status === 'upcoming') { <button class="btn btn-soft sm" (click)="deleteTournament(t.id)">Delete</button> }</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  }
+</main>
+
+<!-- ================= USER DETAIL DRAWER ================= -->
+@if (detail(); as d) {
+  <div class="back" (click)="detail.set(null)"></div>
+  <aside class="drawer anim-rise">
+    <header><div><h3>{{ d.user.fullName }}</h3><small class="muted">&#64;{{ d.user.username }} · {{ d.user.email }} · last IP {{ d.user.lastIp ?? '—' }}@if (d.user.referrer) { · ref {{ d.user.referrer }} }</small></div>
+      <button class="icon-btn" (click)="detail.set(null)"><app-icon name="close" [size]="16" /></button></header>
+    <div class="row wrap">
+      <button class="btn sm" [class.btn-sell]="!d.user.blocked" [class.btn-buy]="d.user.blocked" (click)="patchUser(d.user.id, { blocked: !d.user.blocked })">{{ d.user.blocked ? 'Unblock' : 'Block user' }}</button>
+      <button class="btn btn-soft sm" (click)="patchUser(d.user.id, { role: d.user.role === 'admin' ? 'user' : 'admin' })">{{ d.user.role === 'admin' ? 'Remove admin' : 'Make admin' }}</button>
+      <button class="btn btn-soft sm" (click)="tradeFilter.set({ userId: d.user.id, symbol: '', status: '', accountType: '' }); detail.set(null); go('trades')">Trades</button>
+      <button class="btn btn-soft sm" (click)="ledgerFilter.set({ userId: d.user.id, type: '', accountType: '' }); detail.set(null); go('ledger')">Ledger</button>
+    </div>
+    <div class="accs">
+      @for (a of d.accounts; track a.id) { <div><span>{{ a.type }}</span><b>{{ money(a.balance) }}</b>@if (a.bonusBalance) { <small>+{{ money(a.bonusBalance) }} bonus</small> }</div> }
+    </div>
+    <h4>Manual adjustment</h4>
+    <div class="adj">
+      <select class="input sm" [ngModel]="adj().accountId" (ngModelChange)="setAdj('accountId', $event)">@for (a of d.accounts; track a.id) { <option [value]="a.id">{{ a.type }}</option> }</select>
+      <select class="input sm" [ngModel]="adj().bucket" (ngModelChange)="setAdj('bucket', $event)"><option value="cash">cash</option><option value="bonus">bonus</option></select>
+      <input class="input sm" type="number" placeholder="± USD" [ngModel]="adj().amount" (ngModelChange)="setAdj('amount', $event)" />
+      <input class="input sm" placeholder="Reason (audited)" [ngModel]="adj().note" (ngModelChange)="setAdj('note', $event)" />
+      <button class="btn btn-primary sm" (click)="adjust()" [disabled]="!adj().note || !adj().amount || busy()">Apply</button>
+    </div>
+    <h4>Custom Withdrawal Popup</h4>
+    <div class="panel user-popup-box">
+      <div class="panel-header-row">
+        <span><b>Custom Popup for @{{ d.user.username }}</b></span>
+        <label class="switch-lbl">
+          <span class="switch"><input type="checkbox" [ngModel]="userPopup().enabled" (ngModelChange)="updateUserPopup('enabled', $event)" /><span></span></span>
+          <small>{{ userPopup().enabled ? 'Active (Overrides Global)' : 'Use Global' }}</small>
+        </label>
+      </div>
+
+      <div class="popup-form-grid compact">
+        <div class="field">
+          <label>Title</label>
+          <input class="input sm" placeholder="e.g. Account Clearance Required" [ngModel]="userPopup().title" (ngModelChange)="updateUserPopup('title', $event)" />
+        </div>
+        <div class="field">
+          <label>Tone</label>
+          <select class="input sm" [ngModel]="userPopup().type" (ngModelChange)="updateUserPopup('type', $event)">
+            @for (t of popupTypes; track t.id) { <option [value]="t.id">{{ t.label }}</option> }
+          </select>
+        </div>
+        <div class="field span-2">
+          <label>Custom Message</label>
+          <textarea class="input" rows="3" placeholder="Custom message for this user..." [ngModel]="userPopup().message" (ngModelChange)="updateUserPopup('message', $event)"></textarea>
+        </div>
+        <div class="field">
+          <label>Button Label</label>
+          <input class="input sm" placeholder="Button text" [ngModel]="userPopup().buttonText" (ngModelChange)="updateUserPopup('buttonText', $event)" />
+        </div>
+        <div class="field">
+          <label>Button Action</label>
+          <select class="input sm" [ngModel]="userPopup().buttonAction" (ngModelChange)="updateUserPopup('buttonAction', $event)">
+            @for (a of popupActions; track a.id) { <option [value]="a.id">{{ a.label }}</option> }
+          </select>
+        </div>
+        <div class="field span-2 checkbox-row">
+          <label class="checkbox">
+            <input type="checkbox" [ngModel]="userPopup().blocking" (ngModelChange)="updateUserPopup('blocking', $event)" />
+            <span><b>Block this user from withdrawing</b></span>
+          </label>
+        </div>
+      </div>
+
+      <div class="panel-actions">
+        <button class="btn btn-primary sm" (click)="saveUserPopup()" [disabled]="busy()">Save User Popup</button>
+        <button class="btn btn-soft sm" (click)="previewPopup.set(userPopup())">Preview</button>
+      </div>
+    </div>
+
+    <h4>Recent ledger</h4>
+    <div class="mini">@for (l of d.ledger.slice(0, 12); track l.id) { <div><code>{{ l.type }}</code><span class="muted">{{ dt(l.createdAt) }}</span><b [class.up-text]="l.amount > 0" [class.down-text]="l.amount < 0">{{ signed(l.amount) }}</b></div> }</div>
+    <h4>Deposits / withdrawals</h4>
+    <div class="mini">
+      @for (x of d.deposits.slice(0, 6); track x.id) { <div><span>⬇ {{ methodLabel(x.method) }}</span><span class="badge" [class]="tone(x.status)">{{ x.status }}</span><b>{{ money(x.amount) }}</b></div> }
+      @for (x of d.withdrawals.slice(0, 6); track x.id) { <div><span>⬆ {{ methodLabel(x.method) }}</span><span class="badge" [class]="tone(x.status)">{{ x.status }}</span><b>{{ money(x.amount) }}</b></div> }
+    </div>
+  </aside>
+}
+
+<!-- ================= AUDIT MODAL ================= -->
+@if (audit(); as a) {
+  <div class="back" (click)="audit.set(null)"></div>
+  <div class="modal anim-pop">
+    <header><h3>Trade audit · {{ a.trade.symbol }} {{ a.trade.direction === 'up' ? '▲' : '▼' }} · {{ a.trade.username }}</h3><button class="icon-btn" (click)="audit.set(null)"><app-icon name="close" [size]="16" /></button></header>
+    <div class="verdict" [class.ok]="a.verified">{{ a.verified ? '✓ Verified: outcome and payout recomputed from stored ticks match the record' : a.trade.status === 'open' ? 'Trade still open' : '⚠ Mismatch: investigate' }}</div>
+    <app-audit-chart [ticks]="a.ticks" [openAt]="a.trade.openedAt" [expiresAt]="a.trade.expiresAt" [openPrice]="a.trade.openPrice" [closePrice]="a.trade.closePrice" [up]="a.trade.direction === 'up'" />
+    <div class="facts">
+      <div><span>Open tick</span><b class="mono">{{ a.openTick?.id?.slice(-10) }}</b><small>{{ a.openTick?.price }} @ {{ a.openTick ? dt(a.openTick.ts) : '' }}</small></div>
+      <div><span>Recorded close tick</span><b class="mono">{{ a.closeTick?.id?.slice(-10) ?? '—' }}</b><small>{{ a.closeTick?.price }}</small></div>
+      <div><span>Re-derived close tick</span><b class="mono">{{ a.derivedCloseTick?.id?.slice(-10) ?? '—' }}</b><small>{{ a.derivedCloseTick?.price }}</small></div>
+      <div><span>Recorded</span><b>{{ a.trade.status }} · {{ money(a.trade.payout) }}</b></div>
+      <div><span>Recomputed</span><b>{{ a.recomputed?.status ?? '—' }} · {{ a.recomputed ? money(a.recomputed.payout) : '—' }}</b></div>
+      <div><span>Funding</span><b>{{ money(a.trade.fromCash) }} cash / {{ money(a.trade.fromBonus) }} bonus</b></div>
+      <div><span>Idempotency key</span><b class="mono">{{ a.trade.idempotencyKey }}</b></div>
+      <div><span>Ticks in window</span><b>{{ a.ticks.length }}</b></div>
+    </div>
+    <h4>Ledger entries</h4>
+    <div class="mini">@for (l of a.ledger; track l.id) { <div><code>{{ l.type }}</code><span>{{ l.bucket }}</span><b [class.up-text]="l.amount > 0" [class.down-text]="l.amount < 0">{{ signed(l.amount) }}</b></div> }</div>
+  </div>
+}
+
+@if (preview(); as p) {
+  <div class="back" (click)="preview.set(null)"></div>
+  <div class="modal doc-prev anim-pop">
+    @if (p.mime === 'application/pdf') { <iframe [src]="p.safe" title="Document"></iframe> } @else { <img [src]="p.url" alt="KYC document" /> }
+  </div>
+}
+
+<!-- ================= WITHDRAWAL POPUP PREVIEW MODAL ================= -->
+@if (previewPopup(); as p) {
+  <div class="back" (click)="previewPopup.set(null)"></div>
+  <div class="modal anim-pop w-preview-modal" [class]="'tone-' + p.type">
+    <header>
+      <div class="prev-title">
+        <app-icon [name]="p.type === 'error' ? 'close' : p.type === 'warning' ? 'alert' : p.type === 'success' ? 'check' : 'info'" [size]="22" />
+        <h3>{{ p.title || 'Withdrawal Notice' }}</h3>
+      </div>
+      <button class="icon-btn" (click)="previewPopup.set(null)"><app-icon name="close" [size]="16" /></button>
+    </header>
+    <div class="prev-body">
+      <p class="prev-msg">{{ p.message || 'No message configured.' }}</p>
+      @if (p.blocking) {
+        <div class="prev-alert">
+          <app-icon name="lock" [size]="18" />
+          <span><b>Blocking Mode Active:</b> Withdrawal requests are currently disabled.</span>
+        </div>
+      }
+    </div>
+    <footer>
+      <button class="btn btn-primary block lg" (click)="previewPopup.set(null)">{{ p.buttonText || 'Understood' }}</button>
+    </footer>
+  </div>
+}

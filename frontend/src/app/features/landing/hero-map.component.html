@@ -1,0 +1,43 @@
+<div class="layer map-layer">
+  <img class="dots" src="/img/world-dots.svg" alt="" draggable="false" />
+  <svg class="overlay" viewBox="0 0 1000 389" aria-hidden="true">
+    <defs>
+      <linearGradient id="arcGrad" x1="0" x2="1">
+        <stop offset="0" stop-color="#2DD4BF" stop-opacity="0" />
+        <stop offset=".5" stop-color="#38BDF8" />
+        <stop offset="1" stop-color="#2DD4BF" stop-opacity="0" />
+      </linearGradient>
+      <filter id="arcGlow" x="-20%" y="-20%" width="140%" height="140%">
+        <feGaussianBlur stdDeviation="2.4" result="b" />
+        <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
+      </filter>
+    </defs>
+
+    @for (a of arcs; track a.id) {
+      <path class="arc-base" [attr.d]="a.d" />
+      <path class="arc-flow" [attr.d]="a.d" pathLength="100" filter="url(#arcGlow)" [style.animation-delay.s]="a.delay" [style.animation-duration.s]="a.dur" />
+      <circle r="2.4" class="comet" filter="url(#arcGlow)" opacity="0">
+        <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.1;0.85;1" [attr.dur]="a.dur + 's'" [attr.begin]="a.delay + 's'" repeatCount="indefinite" />
+        <animateMotion [attr.path]="a.d" [attr.dur]="a.dur + 's'" [attr.begin]="a.delay + 's'" repeatCount="indefinite" keyPoints="0;1" keyTimes="0;1" calcMode="spline" keySplines=".4 0 .2 1" />
+      </circle>
+    }
+
+    @for (c of cities; track c.name) {
+      <g class="node" [attr.transform]="'translate(' + c.x + ' ' + c.y + ')'">
+        <circle r="10" class="pulse" />
+        <circle r="10" class="pulse late" />
+        <circle r="3.2" class="core" />
+      </g>
+    }
+  </svg>
+</div>
+
+<div class="layer chip-layer">
+  @for (c of chips(); track c.name; let i = $index) {
+    <div class="chip" [attr.data-city]="c.name" [class.down]="!c.up" [class.below]="c.chipSide === 'down'" [style.left.%]="c.left" [style.top.%]="c.top" [style.animation-delay.ms]="600 + i * 140">
+      <span class="city">{{ c.label ?? c.name }}</span>
+      <span class="chg num">{{ c.text }}</span>
+      <span class="tri">{{ c.up ? '▲' : '▼' }}</span>
+    </div>
+  }
+</div>

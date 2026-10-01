@@ -1,0 +1,67 @@
+<h3 class="title">Trades</h3>
+<div class="tabs2" role="tablist">
+  <button role="tab" [class.on]="tab() === 'open'" (click)="setTab('open')">Opened @if (openCount()) { <span class="cnt">{{ openCount() }}</span> }</button>
+  <button role="tab" [class.on]="tab() === 'closed'" (click)="setTab('closed')">Closed</button>
+  <span class="ink" [class.right]="tab() === 'closed'"></span>
+</div>
+
+@if (tab() === 'open') {
+  <div class="list">
+    @for (t of trades.open(); track t.id) {
+      @let f = trades.flashing().get(t.id);
+      <div class="card" [class.won]="f?.status === 'won'" [class.lost]="f?.status === 'lost'" [class.draw]="f?.status === 'draw'" (click)="detail.set(t)">
+        @if (f) {
+          <div class="result">
+            <b>{{ f.status === 'won' ? 'WIN' : f.status === 'lost' ? 'LOSS' : 'REFUND' }}</b>
+            <span class="num">{{ f.status === 'won' ? signed(f.profit) : f.status === 'lost' ? signed(-f.amount) : money(f.amount) }}</span>
+          </div>
+        } @else {
+          <app-countdown-ring [start]="t.openedAt" [end]="t.expiresAt" [color]="t.direction === 'up' ? '#22C55E' : '#EF4444'" [size]="44" />
+          <div class="mid">
+            <div class="n"><span class="dir" [class.up]="t.direction === 'up'">{{ t.direction === 'up' ? '▲' : '▼' }}</span> {{ name(t.symbol) }}</div>
+            <div class="sub num">{{ price(t.openPrice, precision(t.symbol)) }} → {{ price(market.price(t.symbol)(), precision(t.symbol)) }}</div>
+          </div>
+          <div class="amt">
+            <b class="num">{{ money(t.amount) }}</b>
+            <span class="num" [class]="projected(t).cls">{{ projected(t).text }}</span>
+          </div>
+        }
+      </div>
+    } @empty {
+      <div class="empty-state">
+        <div class="ghost"><app-icon name="chart-line" [size]="30" /></div>
+        <p>No opened trades</p>
+        <small>Pick an asset, set time and amount, then press BUY or SELL.</small>
+      </div>
+    }
+  </div>
+} @else {
+  <div class="list scroll" #scroller (scroll)="onScroll($event)">
+    @if (trades.closed().length) {
+      <div class="spacer" [style.height.px]="window().total">
+        <div class="win" [style.transform]="'translateY(' + window().offset + 'px)'">
+          @for (t of window().items; track t.id) {
+            <div class="card closed" [style.height.px]="ROW_H - 8" (click)="detail.set(t)">
+              <span class="badge-r" [class.won]="t.status === 'won'" [class.lost]="t.status === 'lost'">{{ t.status === 'won' ? 'W' : t.status === 'lost' ? 'L' : 'D' }}</span>
+              <div class="mid">
+                <div class="n"><span class="dir" [class.up]="t.direction === 'up'">{{ t.direction === 'up' ? '▲' : '▼' }}</span> {{ name(t.symbol) }}</div>
+                <div class="sub">{{ t.durationSec }}s · {{ money(t.amount) }}</div>
+              </div>
+              <div class="amt">
+                <b class="num" [class.up-text]="t.profit > 0" [class.down-text]="t.profit < 0">{{ signed(t.profit) }}</b>
+                <span class="sub">{{ timeOf(t.closedAt) }}</span>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+      @if (loadingMore()) { <div class="more"><span class="spinner"></span></div> }
+    } @else {
+      <div class="empty-state"><p>No closed trades yet</p></div>
+    }
+  </div>
+}
+
+@if (detail(); as d) {
+  <app-trade-detail [tradeId]="d.id" (closed)="detail.set(null)" />
+}

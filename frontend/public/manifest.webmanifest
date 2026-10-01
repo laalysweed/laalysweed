@@ -1,0 +1,13 @@
+{
+  "name": "Y2 Markets",
+  "short_name": "Y2 Markets",
+  "description": "Trade crypto, forex, commodities, stocks and indices.",
+  "start_url": "/app/trading",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0F1420",
+  "theme_color": "#0F1420",
+  "icons": [
+    { "src": "favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

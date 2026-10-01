@@ -1,0 +1,289 @@
+<div class="fin-grid">
+  <div class="main">
+    <!-- STEPPER -->
+    <ol class="stepper">
+      <li [class.on]="step() >= 1" [class.done]="step() > 1"><span class="n">@if (step() > 1) { <app-icon name="check" [size]="16" /> } @else { 1 }</span> Deposit method</li>
+      <li [class.on]="step() >= 2" [class.done]="step() > 2"><span class="n">@if (step() > 2) { <app-icon name="check" [size]="16" /> } @else { 2 }</span> Payment details</li>
+      <li [class.on]="step() >= 3"><span class="n">3</span> Payment process</li>
+      <span class="progress" [style.width.%]="(step() - 1) * 50"></span>
+    </ol>
+
+    @switch (step()) {
+      <!-- ============ STEP 1 ============ -->
+      @case (1) {
+        <div class="anim-rise">
+          <div class="promo-card box">
+            <span class="pc-ico"><app-icon name="box" [size]="32" /></span>
+            <div class="pc-content">
+              <div class="pc-tag-row"><span class="pc-badge box-badge">MYSTERY REWARD</span></div>
+              <h3>Open Trader's Box</h3>
+              <p>For a first deposit ${{ (bonus()?.tradersBox?.minDeposit ?? 2500) / 100 }} or more you receive a random reward from the Trader's Box.</p>
+            </div>
+          </div>
+          <div class="promo-card welcome">
+            <span class="pc-ico"><app-icon name="gift" [size]="32" /></span>
+            <div class="pc-content">
+              <div class="pc-tag-row"><span class="pc-badge welcome-badge">+100% BONUS</span></div>
+              <h3>Welcome Bonus</h3>
+              <p>Top up your real account balance and get the 100% bonus. Please continue the deposit process to get this bonus.</p>
+            </div>
+          </div>
+
+          <label class="lbl-lg">Your country/Region</label>
+          <select class="input big" [ngModel]="country()" (ngModelChange)="setCountry($event)">
+            @for (c of countries; track c.code) { <option [value]="c.code">{{ c.name }}</option> }
+          </select>
+
+          <div class="search-row">
+            <div class="search"><input placeholder="Search payment method" [ngModel]="q()" (ngModelChange)="q.set($event)" /><app-icon name="search" [size]="20" /></div>
+            <div class="view-toggle">
+              <button [class.on]="view() === 'grid'" (click)="view.set('grid')" aria-label="Grid"><app-icon name="grid" [size]="20" /></button>
+              <button [class.on]="view() === 'list'" (click)="view.set('list')" aria-label="List"><app-icon name="list" [size]="20" /></button>
+            </div>
+          </div>
+
+          <div class="section-line"><span>🔥 Popular</span></div>
+          <div class="methods" [class.list]="view() === 'list'">
+            @for (m of methods(); track m.id) {
+              <button class="method" [class.off]="!m.available" [disabled]="!m.available" (click)="pick(m)" [attr.aria-label]="m.available ? m.name : m.name + ' (locked)'">
+                <div class="m-top">
+                  <span class="logo" [attr.data-logo]="m.logo">{{ logoText(m.logo, m.name) }}</span>
+                  <b>{{ m.name }}</b>
+                  @if (m.id === 'crypto') {
+                    <span class="coin-row">@for (c of ['USDT', 'BTC', 'ETH', 'BNB', 'SOL']; track c) { <app-coin [coin]="c" [size]="18" /> }</span>
+                  }
+                  @if (!m.available) { <app-icon class="lock" name="lock" [size]="18" /> }
+                </div>
+                <div class="m-foot">
+                  <span>Min: ${{ m.minDeposit / 100 }}</span>
+                  <span>{{ m.eta }}</span>
+                </div>
+              </button>
+            } @empty {
+              @if (!data()) { @for (i of [1, 2, 3, 4, 5, 6]; track i) { <div class="method skeleton" style="height: 150px"></div> } }
+              @else { <div class="empty">No methods match your search</div> }
+            }
+          </div>
+          @if (!showAll() && !q()) {
+            <button class="show-all" (click)="showAll.set(true)">Show all payment methods <app-icon name="chevron-down" [size]="16" /></button>
+          }
+        </div>
+      }
+
+      <!-- ============ STEP 2 ============ -->
+      @case (2) {
+        @if (method(); as m) {
+          @if (m.id === 'crypto') {
+            <!-- Crypto: pick amount, then coin -->
+            <div class="crypto card-solid anim-rise">
+              <div class="c-head">
+                <button class="icon-btn" (click)="step.set(1)" aria-label="Back"><app-icon name="chevron-left" [size]="20" /></button>
+                <div><h3>Select coin</h3><small class="muted">Choose an amount, then the currency you'll send</small></div>
+              </div>
+
+              <div class="c-label">Deposit amount (USD)</div>
+              <div class="c-chips">
+                @for (c of cryptoChips(); track c) {
+                  <button [class.on]="+amount() === c" (click)="setCryptoAmount(c)">${{ c }}</button>
+                }
+              </div>
+              <div class="c-custom">
+                <span>$</span>
+                <input type="number" inputmode="decimal" min="0.01" step="any" placeholder="Custom amount" [ngModel]="amount()" (ngModelChange)="setCryptoAmount($event)" />
+              </div>
+              @if (cents() < m.minDeposit) { <small class="hint err">Minimum deposit is ${{ m.minDeposit / 100 }}</small> }
+
+              <div class="c-label">Choose cryptocurrency</div>
+              <div class="c-coins">
+                @for (c of coins() ?? []; track c.code) {
+                  <button class="c-coin" (click)="pickCoin(c)" [disabled]="busy()">
+                    <app-coin [coin]="c.coin" [size]="44" />
+                    <span class="c-meta">
+                      <b>{{ c.coin }} @if (c.popular) { <span class="badge green">Most popular</span> }</b>
+                      <small>{{ c.network }}</small>
+                    </span>
+                    @if (c.coinAmount != null) { <span class="c-amt num">≈ {{ fmtCoin(c.coinAmount) }} {{ c.coin }}</span> }
+                    <app-icon name="chevron-right" [size]="18" />
+                  </button>
+                } @empty {
+                  @if (coins() === null) { @for (i of [1, 2, 3]; track i) { <div class="skeleton" style="height: 72px; border-radius: 14px"></div> } }
+                  @else { <div class="empty">Crypto deposits are not available right now.</div> }
+                }
+              </div>
+              @if (error()) { <div class="alert">{{ error() }}</div> }
+            </div>
+          } @else {
+          <div class="details anim-rise">
+            <button class="back" (click)="step.set(1)"><app-icon name="chevron-left" [size]="18" /> Change method</button>
+            <div class="card-solid">
+              <div class="row m-head"><span class="logo" [attr.data-logo]="m.logo">{{ logoText(m.logo, m.name) }}</span><div><b>{{ m.name }}</b><small class="muted">{{ m.eta }} · no commission</small></div></div>
+
+              <div class="field">
+                <label>Amount (USD)</label>
+                <input class="input big num" type="number" min="0.01" step="any" inputmode="decimal" [ngModel]="amount()" (ngModelChange)="amount.set($event)" />
+                <div class="chips">
+                  @for (c of chips(); track c) { <button [class.on]="+amount() === c" (click)="amount.set(c)">${{ c }}</button> }
+                </div>
+                <span class="hint" [class.err]="cents() < m.minDeposit || cents() > (data()?.limits?.maxDeposit ?? 1e12)">Minimum ${{ m.minDeposit / 100 }}@if (data()?.limits?.maxDeposit) { · Maximum ${{ (data()!.limits.maxDeposit! / 100).toLocaleString() }} }@if (m.id === 'mpesa') { · You pay <b>KES {{ kes().toLocaleString() }}</b> (rate {{ data()?.kesPerUsd }}) }</span>
+              </div>
+
+              @if (m.id === 'mpesa') {
+                <div class="field">
+                  <label>M-Pesa phone number</label>
+                  <input class="input big" inputmode="tel" placeholder="07XX XXX XXX" [ngModel]="phone()" (ngModelChange)="phone.set($event)" />
+                  <span class="hint">You'll get a prompt on this phone to enter your M-Pesa PIN.</span>
+                </div>
+              }
+
+              @if (error()) { <div class="alert">{{ error() }}</div> }
+              <button class="btn btn-buy lg block pay-btn" (click)="submit()" [disabled]="!valid() || busy()">
+                @if (busy()) { <span class="spinner"></span> } @else { Continue to payment · {{ money(cents()) }} }
+              </button>
+              <small class="muted bonus-hint">Optional bonuses are below. Pick one before continuing if you want it.</small>
+            </div>
+
+            <!-- BONUSES -->
+            <h3 class="sub-title">Bonus (optional)</h3>
+            <div class="offers">
+              @for (o of bonus()?.offers ?? []; track o.key) {
+                <div class="offer" [class.on]="offer() === o.key" [class.disabled]="!o.eligible">
+                  <button class="offer-h" (click)="o.eligible && toggleOffer(o.key)" [disabled]="!o.eligible">
+                    <span class="radio"></span>
+                    <span><b>{{ o.title }}</b><small>{{ o.eligible ? o.summary : 'Not available on this account' }}</small></span>
+                    <span class="pct">+{{ o.pct }}%</span>
+                  </button>
+                  @if (termsOpen() === o.key) {
+                    <div class="terms anim-rise">
+                      <ol>@for (t of o.terms; track $index) { <li>{{ t }}</li> }</ol>
+                      <label class="checkbox"><input type="checkbox" [ngModel]="acceptTerms()" (ngModelChange)="acceptTerms.set($event)" /> <span>I have read and accept these bonus terms</span></label>
+                    </div>
+                  } @else if (o.eligible) {
+                    <button class="link" (click)="termsOpen.set(o.key)">Read full terms</button>
+                  }
+                </div>
+              }
+              @if (bonus()?.tradersBox?.enabled) {
+                <div class="offer box-offer" [class.on]="box()" [class.disabled]="!bonus()?.tradersBox?.eligible">
+                  <label class="offer-h">
+                    <input type="checkbox" class="sr-only" [ngModel]="box()" (ngModelChange)="box.set($event)" [disabled]="!bonus()?.tradersBox?.eligible" />
+                    <span class="radio sq"></span>
+                    <span><b>Open Trader's Box</b><small>{{ bonus()?.tradersBox?.eligible ? 'First deposit of $' + (bonus()!.tradersBox.minDeposit / 100) + '+ · cash reward, no turnover' : 'Only available on your first deposit' }}</small></span>
+                    <app-icon name="dice" [size]="26" />
+                  </label>
+                  <table class="odds">
+                    <tr><th>Reward</th><th>Chance</th></tr>
+                    @for (r of bonus()?.tradersBox?.odds ?? []; track r.label) { <tr><td>{{ r.label }}</td><td>{{ pctText(r.probability) }}</td></tr> }
+                  </table>
+                  <small class="muted">Expected value {{ money(bonus()?.tradersBox?.expectedValue ?? 0) }}. Drawn on our server with a cryptographically secure RNG; every roll is recorded.</small>
+                </div>
+              }
+            </div>
+
+            <div class="summary card-solid">
+              <div class="row"><span>You deposit</span><b>{{ money(cents()) }}</b></div>
+              <div class="row"><span>Commission</span><b class="up-text">$0.00</b></div>
+              @if (offer()) { <div class="row"><span>Bonus funds (separate balance)</span><b class="up-text">+{{ money(bonusAmount()) }}</b></div> }
+              @if (box() && boxEligible()) { <div class="row"><span>Trader's Box</span><b>🎲 random cash reward</b></div> }
+              <div class="row total"><span>Credited to real account</span><b>{{ money(cents()) }}</b></div>
+            </div>
+          </div>
+          }
+        }
+      }
+
+      <!-- ============ STEP 3 ============ -->
+      @case (3) {
+        @if (dep(); as d) {
+          <div class="process card-solid anim-pop">
+            @switch (d.status) {
+              @case ('completed') {
+                <div class="state ok"><app-icon name="check" [size]="40" /></div>
+                <h2>Deposit successful</h2>
+                <p class="muted">{{ money(d.amount) }} has been added to your real account{{ d.receipt ? ' · Ref ' + d.receipt : '' }}.</p>
+                @if (d.tradersBoxResult; as r) {
+                  <div class="box-result anim-pop"><span>🎁</span><div><b>Trader's Box opened!</b><p>You won <b>{{ r.label }}</b> (roll {{ r.roll }} of {{ r.weightTotal }}).</p></div></div>
+                }
+                <div class="row center"><a class="btn btn-brand pill" routerLink="/app/trading">Start trading</a><button class="btn btn-ghost pill" (click)="restart()">New deposit</button></div>
+              }
+              @case ('failed') {
+                <div class="state bad"><app-icon [name]="result(d.failureCode).icon" [size]="40" /></div>
+                <h2>{{ result(d.failureCode).title }}</h2>
+                <p class="muted">{{ d.failureReason ?? 'The payment was not completed.' }}</p>
+                <p class="muted small">No money was taken from your account. Your balance is unchanged.</p>
+                <div class="row center"><button class="btn btn-primary pill" (click)="step.set(2)">Try again</button><button class="btn btn-ghost pill" (click)="restart()">Other method</button></div>
+              }
+              @case ('cancelled') {
+                <div class="state cancel"><app-icon name="close" [size]="40" /></div>
+                <h2>Payment cancelled</h2>
+                <p class="muted">{{ d.failureReason ?? 'The payment was cancelled.' }}</p>
+                <p class="muted small">Nothing was charged. You can start a new deposit whenever you're ready.</p>
+                <div class="row center"><button class="btn btn-primary pill" (click)="step.set(2)">Try again</button><button class="btn btn-ghost pill" (click)="restart()">Other method</button></div>
+              }
+              @case ('awaiting_review') {
+                <div class="state wait"><app-icon name="clock" [size]="40" /></div>
+                <h2>Transfer submitted</h2>
+                <p class="muted">Our team is confirming your transaction on the blockchain. You'll be notified as soon as it is credited.</p>
+                <button class="btn btn-ghost pill" (click)="restart()">Back to methods</button>
+              }
+              @default {
+                @if (d.payTo; as p) {
+                  <!-- Crypto: scan QR or copy address -->
+                  <div class="send">
+                    <div class="c-head">
+                      <button class="icon-btn" (click)="step.set(2)" aria-label="Back"><app-icon name="chevron-left" [size]="20" /></button>
+                      <div><h3>Send {{ p.coin }}</h3><small class="muted">{{ p.network }}</small></div>
+                      <button class="icon-btn" (click)="restart()" aria-label="Close"><app-icon name="close" [size]="18" /></button>
+                    </div>
+                    <div class="s-summary">
+                      <app-coin [coin]="p.coin" [size]="46" />
+                      <div><b>{{ p.coin }}</b><small>{{ p.network }}</small></div>
+                      <div class="s-amt"><small>Depositing</small><b>{{ money(d.amount) }}</b>
+                        @if (p.coinAmount != null) { <small class="num">≈ {{ fmtCoin(p.coinAmount) }} {{ p.coin }}</small> }</div>
+                    </div>
+                    <div class="qr"><img [src]="p.qr" alt="QR code of the deposit address" width="200" height="200" /></div>
+                    <div class="s-label">Deposit address</div>
+                    <div class="s-addr">
+                      <code (click)="copyAddress(p.address)" [title]="p.address">{{ shortAddr(p.address) }}</code>
+                      <button class="btn btn-brand sm" (click)="copyAddress(p.address)"><app-icon [name]="copied() ? 'check' : 'copy'" [size]="16" /> {{ copied() ? 'Copied' : 'Copy' }}</button>
+                    </div>
+                    <div class="warnbox">
+                      <div class="w-title"><app-icon name="warn" [size]="16" /> Important: read before sending</div>
+                      <p>Only send <b>{{ p.coin }}</b> on the <b>{{ p.network }}</b> network to this address.</p>
+                      <p>Sending another coin or using the wrong network will result in <b>permanent loss of funds</b>.</p>
+                    </div>
+                    <details class="txid">
+                      <summary>Already sent? Add the transaction ID to speed up confirmation</summary>
+                      <div class="row">
+                        <input class="input sm" [ngModel]="txHash()" (ngModelChange)="txHash.set($event)" placeholder="Transaction ID / hash" />
+                        <button class="btn btn-primary sm" (click)="submitTx()" [disabled]="txHash().trim().length < 10 || busy()">Submit</button>
+                      </div>
+                    </details>
+                    <div class="awaiting"><span class="dot"></span> Awaiting your deposit · your balance updates automatically once it's confirmed</div>
+                  </div>
+                } @else {
+                  <div class="pulse-phone"><app-icon [name]="d.method === 'mpesa' ? 'bolt' : 'cards'" [size]="40" /></div>
+                  <h2>{{ d.method === 'mpesa' ? 'Check your phone' : 'Processing payment' }}</h2>
+                  <p class="muted">{{ d.method === 'mpesa' ? 'Enter your M-Pesa PIN in the prompt sent to ' + d.phone + ' to pay KES ' + d.localAmount + '.' : 'Please wait while we confirm your payment.' }}</p>
+                  <div class="dots-loader"><i></i><i></i><i></i></div>
+                  <small class="muted">This page updates automatically.</small>
+                }
+              }
+            }
+          </div>
+        }
+      }
+    }
+  </div>
+
+  <!-- RIGHT INFO COLUMN -->
+  <aside class="info">
+    <div class="info-card">
+      <div class="row"><span>Minimum deposit amount:</span><b>${{ (data()?.limits?.minDeposit ?? 1000) / 100 }}</b></div>
+      <div class="row"><span>Minimum withdrawal amount:</span><b>${{ (data()?.limits?.minWithdrawal ?? 1000) / 100 }}</b></div>
+      <div class="row"><span>Commission:</span><b class="up-text">No commission</b></div>
+    </div>
+    <p class="muted">Do you have questions or need help with account top-up?</p>
+    <a routerLink="/app/help">View our User Guide</a>
+    <button class="link-btn" (click)="ui.chatOpen.set(true)">Contact Support Service</button>
+  </aside>
+</div>

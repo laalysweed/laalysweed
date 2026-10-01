@@ -1,0 +1,66 @@
+<div class="host" #host [class.drawing]="drawTool() !== 'none'"></div>
+
+<svg class="ov" [attr.viewBox]="'0 0 ' + overlay().w + ' ' + overlay().h" preserveAspectRatio="none" aria-hidden="true">
+  <defs>
+    <linearGradient id="zoneUp" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0" stop-color="#22C55E" stop-opacity=".32" />
+      <stop offset="1" stop-color="#22C55E" stop-opacity="0" />
+    </linearGradient>
+    <linearGradient id="zoneDown" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#EF4444" stop-opacity=".32" />
+      <stop offset="1" stop-color="#EF4444" stop-opacity="0" />
+    </linearGradient>
+  </defs>
+
+  @if (overlay().zone; as z) {
+    <rect class="zone" [attr.x]="z.x1" [attr.width]="Math.max(0, z.x2 - z.x1)"
+      [attr.y]="z.dir === 'up' ? 0 : z.y" [attr.height]="z.dir === 'up' ? z.y : overlay().h - z.y"
+      [attr.fill]="z.dir === 'up' ? 'url(#zoneUp)' : 'url(#zoneDown)'" />
+  }
+
+  @if (overlay().currentPoint; as cp) {
+    <g class="cur-marker">
+      <line [attr.x1]="0" [attr.x2]="overlay().w" [attr.y1]="cp.y" [attr.y2]="cp.y" class="cur-h-line" />
+      <line [attr.x1]="cp.x" [attr.x2]="cp.x" [attr.y1]="0" [attr.y2]="overlay().h" class="cur-v-line" />
+      <circle [attr.cx]="cp.x" [attr.cy]="cp.y" r="14" class="cur-halo" />
+      <circle [attr.cx]="cp.x" [attr.cy]="cp.y" r="5" class="cur-dot" />
+    </g>
+  }
+
+  @for (t of overlay().trades; track t.id) {
+    <g class="trade" [class.flash-won]="t.flash === 'won'" [class.flash-lost]="t.flash === 'lost'">
+      <line [attr.x1]="t.x1" [attr.x2]="t.x2" [attr.y1]="t.y" [attr.y2]="t.y" [attr.stroke]="t.winning ? '#22C55E' : '#EF4444'" stroke-width="1.6" stroke-dasharray="4 3" />
+      <line [attr.x1]="t.x2" [attr.x2]="t.x2" [attr.y1]="t.y - 8" [attr.y2]="t.y + 8" [attr.stroke]="t.winning ? '#22C55E' : '#EF4444'" stroke-width="2" />
+      <circle [attr.cx]="t.x1" [attr.cy]="t.y" r="5" [attr.fill]="t.up ? '#22C55E' : '#EF4444'" stroke="#0F1420" stroke-width="2" />
+    </g>
+  }
+
+  @for (l of overlay().trends; track $index) {
+    <line class="trend" [attr.x1]="l.x1" [attr.y1]="l.y1" [attr.x2]="l.x2" [attr.y2]="l.y2" />
+    <circle [attr.cx]="l.x1" [attr.cy]="l.y1" r="3.5" fill="#F5B841" />
+    <circle [attr.cx]="l.x2" [attr.cy]="l.y2" r="3.5" fill="#F5B841" />
+  }
+  @if (overlay().draft; as d) {
+    <circle [attr.cx]="d.x" [attr.cy]="d.y" r="4.5" fill="#F5B841" class="blink" />
+  }
+</svg>
+
+<!-- HTML labels (crisper than SVG text) -->
+@for (t of overlay().trades; track t.id) {
+  <div class="trade-tag" [class.up]="t.up" [class.win]="t.winning" [class.flash]="!!t.flash" [attr.data-flash]="t.flash" [style.left.px]="t.x1" [style.top.px]="t.y">
+    <span class="arrow">{{ t.up ? '▲' : '▼' }}</span>{{ t.label }}
+  </div>
+}
+
+@if (overlay().expiry; as e) {
+  <div class="expiry" [style.transform]="'translateX(' + e.x + 'px)'">
+    <div class="flag">
+      <svg width="26" height="26" viewBox="0 0 24 24"><path d="M5 21V4" stroke="#E6EAF2" stroke-width="2" stroke-linecap="round" /><path d="M5 4h13l-3 4 3 4H5" fill="#E6EAF2" /></svg>
+    </div>
+    <div class="exp-label">Expiration time<br /><b>{{ e.label }}</b></div>
+  </div>
+}
+
+@if (loading()) {
+  <div class="loading"><span class="spinner"></span></div>
+}
