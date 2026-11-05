@@ -59,6 +59,20 @@
               }
             </div>
 
+            <div class="field">
+              <label for="signup-phone">Phone Number <span class="opt">(optional)</span></label>
+              <div class="phone-control">
+                <select aria-label="Country calling code" [ngModel]="phoneCountry()" (ngModelChange)="phoneCountry.set($event)" name="signupPhoneCountry">
+                  @for (country of phoneCountries; track country.code) {
+                    <option [value]="country.code">{{ country.flag }} {{ country.name }} (+{{ country.dialCode }})</option>
+                  }
+                </select>
+                <input id="signup-phone" class="input" type="tel" inputmode="tel" autocomplete="tel-national" placeholder="Phone number"
+                  [class.invalid]="!phoneValid()" [ngModel]="phone()" (ngModelChange)="phone.set($event)" name="signupPhone" />
+              </div>
+              @if (!phoneValid()) { <span class="hint err">Enter a valid phone number for the selected country</span> }
+            </div>
+
             <div class="field-row">
               <div class="field">
                 <label for="pw">Password</label>
@@ -127,10 +141,29 @@
             <p class="sub">Log in to continue trading.</p>
           </div>
           <form (ngSubmit)="login()">
-            <div class="field">
-              <label for="id">Email or Username</label>
-              <input id="id" class="input" placeholder="you@example.com" autocomplete="username" [ngModel]="identifier()" (ngModelChange)="identifier.set($event)" name="identifier" />
+            <div class="login-switch" role="group" aria-label="Sign-in method">
+              <button type="button" [class.active]="!phoneLogin()" (click)="phoneLogin.set(false)">Email / username</button>
+              <button type="button" [class.active]="phoneLogin()" (click)="phoneLogin.set(true)">Phone number</button>
             </div>
+            @if (phoneLogin()) {
+              <div class="field">
+                <label for="login-phone">Phone Number</label>
+                <div class="phone-control">
+                  <select aria-label="Country calling code" [ngModel]="phoneCountry()" (ngModelChange)="phoneCountry.set($event)" name="loginPhoneCountry">
+                    @for (country of phoneCountries; track country.code) {
+                      <option [value]="country.code">{{ country.flag }} {{ country.name }} (+{{ country.dialCode }})</option>
+                    }
+                  </select>
+                  <input id="login-phone" class="input" type="tel" inputmode="tel" autocomplete="tel" placeholder="Phone number"
+                    [ngModel]="phone()" (ngModelChange)="phone.set($event)" name="loginPhone" />
+                </div>
+              </div>
+            } @else {
+              <div class="field">
+                <label for="id">Email or Username</label>
+                <input id="id" class="input" placeholder="you@example.com" autocomplete="username" [ngModel]="identifier()" (ngModelChange)="identifier.set($event)" name="identifier" />
+              </div>
+            }
             <div class="field">
               <label for="lpw">Password</label>
               <div class="with-state">

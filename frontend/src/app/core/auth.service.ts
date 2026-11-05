@@ -89,7 +89,7 @@ export class AuthService {
     return r;
   }
 
-  async register(body: { fullName: string; username: string; email: string; password: string; referrer?: string; acceptTerms: boolean }) {
+  async register(body: { fullName: string; username: string; email: string; password: string; phone?: string; country?: string; referrer?: string; acceptTerms: boolean }) {
     return this.signInStep(await this.api.post<SignInStep>('/auth/register', body));
   }
 

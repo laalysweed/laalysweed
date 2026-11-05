@@ -8,6 +8,7 @@ import { ToastService } from '../../core/toast.service';
 import { IconComponent } from '../../shared/icon.component';
 import { LogoComponent } from '../../shared/logo.component';
 import { ApiError } from '../../core/models';
+import { PHONE_COUNTRIES } from './phone-countries';
 
 type Avail = { state: 'idle' | 'checking' | 'ok' | 'taken' | 'invalid'; msg: string };
 
@@ -35,6 +36,10 @@ export class AuthDrawerComponent {
   protected referrer = signal('');
   protected terms = signal(false);
   protected identifier = signal('');
+  protected phone = signal('');
+  protected phoneLogin = signal(false);
+  protected phoneCountry = signal('KE');
+  protected phoneCountries = PHONE_COUNTRIES;
   protected code = signal('');
   protected showPw = signal(false);
   protected showPw2 = signal(false);
@@ -61,10 +66,12 @@ export class AuthDrawerComponent {
   protected pwValid = computed(() => this.password().length >= 8 && /[A-Za-z]/.test(this.password()) && /\d/.test(this.password()));
   protected pwMatch = computed(() => !!this.password() && this.password() === this.password2());
   protected nameValid = computed(() => this.fullName().trim().length >= 2);
+  protected phoneValid = computed(() => !this.phone().trim() || /^\+?[1-9]\d{6,14}$/.test(this.normalizedPhone(this.phone(), this.phoneCountry())));
 
   protected canSignup = computed(
     () =>
       this.nameValid() &&
+      this.phoneValid() &&
       this.userAvail().state !== 'taken' &&
       this.userAvail().state !== 'invalid' &&
       this.emailAvail().state !== 'taken' &&
@@ -154,6 +161,10 @@ export class AuthDrawerComponent {
       this.error.set('Please enter your full name (at least 2 letters)');
       return;
     }
+    if (!this.phoneValid()) {
+      this.error.set('Enter a valid international phone number');
+      return;
+    }
     const u = this.username().trim().toLowerCase();
     if (!u || !/^[a-z0-9_]{3,20}$/.test(u)) {
       this.error.set('Username must be 3–20 letters, numbers or underscores');
@@ -198,6 +209,8 @@ export class AuthDrawerComponent {
         fullName: this.fullName().trim(),
         username: u,
         email: em,
+        phone: this.phone().trim() ? this.normalizedPhone(this.phone(), this.phoneCountry()) : undefined,
+        country: this.phoneCountry(),
         password: this.password(),
         referrer: this.referrer().trim().toLowerCase() || undefined,
         acceptTerms: true,
@@ -207,11 +220,25 @@ export class AuthDrawerComponent {
   }
 
   protected async login() {
-    if (!this.identifier().trim() || !this.password()) return this.error.set('Enter your e-mail/username and password');
+    if (this.phoneLogin() ? !this.phone().trim() : !this.identifier().trim()) {
+      this.error.set(this.phoneLogin() ? 'Enter your phone number' : 'Enter your e-mail or username');
+      return;
+    }
+    if (this.phoneLogin() && !this.phoneValid()) return this.error.set('Enter a valid international phone number');
+    if (!this.password()) return this.error.set('Enter your password');
     await this.run(async () => {
       this.newAccount = false;
-      this.handleStep(await this.auth.login(this.identifier().trim(), this.password()));
+      const loginId = this.phoneLogin() ? this.normalizedPhone(this.phone(), this.phoneCountry()) : this.identifier().trim();
+      this.handleStep(await this.auth.login(loginId, this.password()));
     });
+  }
+
+  private normalizedPhone(value: string, countryCode: string) {
+    const raw = value.trim();
+    const digits = raw.replace(/\D/g, '');
+    if (raw.startsWith('+')) return `+${digits}`;
+    const dial = this.phoneCountries.find((c) => c.code === countryCode)?.dialCode ?? '254';
+    return `+${dial}${digits.replace(/^0+/, '')}`;
   }
 
   /* ---------- e-mail code step ---------- */

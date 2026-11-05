@@ -218,6 +218,49 @@ form {
   }
 }
 
+.phone-control {
+  display: flex;
+  gap: 8px;
+  min-width: 0;
+
+  select {
+    width: 46%;
+    min-width: 0;
+    height: 44px;
+    padding: 0 10px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 10px;
+    background: rgba(15, 23, 42, 0.9);
+    color: #fff;
+    font-size: 12px;
+    outline: none;
+    &:focus { border-color: #38bdf8; box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.14); }
+    option { background: #0d1527; color: #fff; }
+  }
+
+  .input { flex: 1; min-width: 0; }
+}
+
+.login-switch {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  padding: 3px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.5);
+
+  button {
+    border: 0;
+    border-radius: 7px;
+    padding: 8px;
+    background: transparent;
+    color: #94a3b8;
+    font-size: 12px;
+    cursor: pointer;
+    &.active { background: rgba(56, 189, 248, 0.15); color: #7dd3fc; }
+  }
+}
+
 .pw-meta {
   display: flex;
   flex-direction: column;

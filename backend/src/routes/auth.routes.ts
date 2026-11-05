@@ -46,6 +46,8 @@ const registerSchema = z.object({
   fullName: z.string().trim().min(2, 'Enter your full name').max(80),
   username: usernameSchema,
   email: z.string().trim().toLowerCase().email('Enter a valid e-mail'),
+  phone: z.string().trim().regex(/^\+[1-9]\d{6,14}$/, 'Enter a valid international phone number').optional(),
+  country: z.string().length(2).toUpperCase().optional(),
   password: passwordSchema,
   referrer: z.string().trim().toLowerCase().max(20).optional().or(z.literal('')),
   acceptTerms: z.literal(true, { errorMap: () => ({ message: 'You must accept the Terms & Conditions' }) }),
@@ -88,13 +90,14 @@ authRouter.post(
     if (RESERVED_USERNAMES.has(b.username)) throw conflict('This username is reserved', 'USERNAME_TAKEN');
     if (await User.exists({ username: b.username })) throw conflict('Username is already taken', 'USERNAME_TAKEN');
     if (await User.exists({ email: b.email })) throw conflict('An account with this e-mail already exists', 'EMAIL_TAKEN');
+    if (b.phone && await User.exists({ phone: b.phone })) throw conflict('An account with this phone number already exists', 'PHONE_TAKEN');
     let referredBy: Types.ObjectId | undefined;
     if (b.referrer) {
       const ref = await User.findOne({ username: b.referrer }, { _id: 1 }).lean();
       if (!ref) throw badRequest('Referrer not found', 'BAD_REFERRER');
       referredBy = ref._id;
     }
-    const user = await withTxn((s) => createUserWithAccounts(s, { fullName: b.fullName, username: b.username, email: b.email, password: b.password, referredBy }));
+    const user = await withTxn((s) => createUserWithAccounts(s, { fullName: b.fullName, username: b.username, email: b.email, password: b.password, phone: b.phone, country: b.country, referredBy }));
     void ChatMessage.create({
       conversationUserId: user._id,
       from: 'support',
@@ -140,10 +143,10 @@ authRouter.post(
   authLimiter,
   ah(async (req, res) => {
     const b = parse(z.object({ identifier: z.string().trim().toLowerCase().min(3), password: z.string().min(1) }), req.body);
-    const user = await User.findOne({ $or: [{ email: b.identifier }, { username: b.identifier }] }).lean<UserT>();
+    const user = await User.findOne({ $or: [{ email: b.identifier }, { username: b.identifier }, ...( /^\+[1-9]\d{6,14}$/.test(b.identifier) ? [{ phone: b.identifier }] : [])] }).lean<UserT>();
     // constant-ish time: always run bcrypt
     const ok = await verifyPassword(b.password, user?.passwordHash ?? '$2b$12$invalidinvalidinvalidinvalidinvalidinvalidinvalidinva');
-    if (!user || !ok) throw unauthorized('Incorrect e-mail/username or password', 'BAD_CREDENTIALS');
+    if (!user || !ok) throw unauthorized('Incorrect sign-in details', 'BAD_CREDENTIALS');
     if (user.blocked) throw unauthorized('This account has been suspended. Contact support.', 'BLOCKED');
     // Unverified players must enter an e-mail code first, but only while e-mail can actually be sent.
     if (!user.emailVerified && user.role !== 'admin' && (await mailCanSend())) {

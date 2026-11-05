@@ -23,7 +23,7 @@ export const RESERVED_USERNAMES = new Set(['admin', 'administrator', 'support', 
 /** Creates the user plus DEMO ($10,000 via ledger) and REAL ($0) accounts, inside a transaction. */
 export async function createUserWithAccounts(
   session: ClientSession,
-  data: { fullName: string; username: string; email: string; password: string; referredBy?: Types.ObjectId; role?: 'user' | 'admin'; emailVerified?: boolean },
+  data: { fullName: string; username: string; email: string; password: string; phone?: string; country?: string; referredBy?: Types.ObjectId; role?: 'user' | 'admin'; emailVerified?: boolean },
 ) {
   const cfg = await getBonusConfig();
   const userId = new Types.ObjectId();
@@ -36,6 +36,8 @@ export async function createUserWithAccounts(
         fullName: data.fullName,
         username: data.username,
         email: data.email,
+        phone: data.phone,
+        country: data.country ?? 'KE',
         passwordHash: await hashPassword(data.password),
         referredBy: data.referredBy,
         role: data.role ?? 'user',
