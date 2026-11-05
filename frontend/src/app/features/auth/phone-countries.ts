@@ -29,8 +29,7 @@ const DIAL_CODES: Record<string, string> = {
 };
 
 const displayNames = new Intl.DisplayNames(['en'], { type: 'region' });
-const flag = (code: string) => String.fromCodePoint(...[...code].map((c) => c.charCodeAt(0) + 127397));
 
 export const PHONE_COUNTRIES = Object.entries(DIAL_CODES)
-  .map(([code, dialCode]) => ({ code, dialCode, name: displayNames.of(code) ?? code, flag: flag(code) }))
+  .map(([code, dialCode]) => ({ code, dialCode, name: displayNames.of(code) ?? code }))
   .sort((a, b) => a.name.localeCompare(b.name));

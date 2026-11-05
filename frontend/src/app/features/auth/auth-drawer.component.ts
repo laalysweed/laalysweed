@@ -40,6 +40,13 @@ export class AuthDrawerComponent {
   protected phoneLogin = signal(false);
   protected phoneCountry = signal('KE');
   protected phoneCountries = PHONE_COUNTRIES;
+  protected selectedPhoneCountry = computed(() => this.phoneCountries.find((c) => c.code === this.phoneCountry()) ?? this.phoneCountries[0]);
+  protected countryPickerOpen = signal(false);
+  protected countrySearch = signal('');
+  protected filteredPhoneCountries = computed(() => {
+    const q = this.countrySearch().trim().toLowerCase();
+    return this.phoneCountries.filter((c) => !q || `${c.name} ${c.code} ${c.dialCode}`.toLowerCase().includes(q));
+  });
   protected code = signal('');
   protected showPw = signal(false);
   protected showPw2 = signal(false);
@@ -66,7 +73,7 @@ export class AuthDrawerComponent {
   protected pwValid = computed(() => this.password().length >= 8 && /[A-Za-z]/.test(this.password()) && /\d/.test(this.password()));
   protected pwMatch = computed(() => !!this.password() && this.password() === this.password2());
   protected nameValid = computed(() => this.fullName().trim().length >= 2);
-  protected phoneValid = computed(() => !this.phone().trim() || /^\+?[1-9]\d{6,14}$/.test(this.normalizedPhone(this.phone(), this.phoneCountry())));
+  protected phoneValid = computed(() => !!this.phone().trim() && /^\+?[1-9]\d{6,14}$/.test(this.normalizedPhone(this.phone(), this.phoneCountry())));
 
   protected canSignup = computed(
     () =>
@@ -209,7 +216,7 @@ export class AuthDrawerComponent {
         fullName: this.fullName().trim(),
         username: u,
         email: em,
-        phone: this.phone().trim() ? this.normalizedPhone(this.phone(), this.phoneCountry()) : undefined,
+        phone: this.normalizedPhone(this.phone(), this.phoneCountry()),
         country: this.phoneCountry(),
         password: this.password(),
         referrer: this.referrer().trim().toLowerCase() || undefined,
@@ -239,6 +246,21 @@ export class AuthDrawerComponent {
     if (raw.startsWith('+')) return `+${digits}`;
     const dial = this.phoneCountries.find((c) => c.code === countryCode)?.dialCode ?? '254';
     return `+${dial}${digits.replace(/^0+/, '')}`;
+  }
+
+  protected flagUrl(countryCode: string) {
+    return `https://flagcdn.com/w40/${countryCode.toLowerCase()}.png`;
+  }
+
+  protected toggleCountryPicker() {
+    this.countryPickerOpen.update((open) => !open);
+    this.countrySearch.set('');
+  }
+
+  protected choosePhoneCountry(countryCode: string) {
+    this.phoneCountry.set(countryCode);
+    this.countryPickerOpen.set(false);
+    this.countrySearch.set('');
   }
 
   /* ---------- e-mail code step ---------- */

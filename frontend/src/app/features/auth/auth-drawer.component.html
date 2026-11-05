@@ -60,14 +60,30 @@
             </div>
 
             <div class="field">
-              <label for="signup-phone">Phone Number <span class="opt">(optional)</span></label>
+              <label for="signup-phone">Phone Number</label>
               <div class="phone-control">
-                <select aria-label="Country calling code" [ngModel]="phoneCountry()" (ngModelChange)="phoneCountry.set($event)" name="signupPhoneCountry">
-                  @for (country of phoneCountries; track country.code) {
-                    <option [value]="country.code">{{ country.flag }} {{ country.name }} (+{{ country.dialCode }})</option>
+                <div class="country-picker">
+                  <button class="country-trigger" type="button" aria-label="Choose country calling code" [attr.aria-expanded]="countryPickerOpen()" (click)="toggleCountryPicker()">
+                    <img [src]="flagUrl(phoneCountry())" alt="" />
+                    <span>+{{ selectedPhoneCountry()?.dialCode }}</span>
+                    <app-icon name="chevron-down" [size]="14" />
+                  </button>
+                  @if (countryPickerOpen()) {
+                    <div class="country-menu">
+                      <input class="country-search" type="search" placeholder="Search country or code" aria-label="Search countries"
+                        [ngModel]="countrySearch()" (ngModelChange)="countrySearch.set($event)" name="signupCountrySearch" />
+                      <div class="country-options">
+                        @for (country of filteredPhoneCountries(); track country.code) {
+                          <button class="country-option" type="button" (click)="choosePhoneCountry(country.code)">
+                            <img [src]="flagUrl(country.code)" [alt]="country.name + ' flag'" />
+                            <span>{{ country.name }}</span><small>+{{ country.dialCode }}</small>
+                          </button>
+                        }
+                      </div>
+                    </div>
                   }
-                </select>
-                <input id="signup-phone" class="input" type="tel" inputmode="tel" autocomplete="tel-national" placeholder="Phone number"
+                </div>
+                <input id="signup-phone" class="input" type="tel" inputmode="tel" autocomplete="tel-national" placeholder="Phone number" required
                   [class.invalid]="!phoneValid()" [ngModel]="phone()" (ngModelChange)="phone.set($event)" name="signupPhone" />
               </div>
               @if (!phoneValid()) { <span class="hint err">Enter a valid phone number for the selected country</span> }
@@ -149,11 +165,27 @@
               <div class="field">
                 <label for="login-phone">Phone Number</label>
                 <div class="phone-control">
-                  <select aria-label="Country calling code" [ngModel]="phoneCountry()" (ngModelChange)="phoneCountry.set($event)" name="loginPhoneCountry">
-                    @for (country of phoneCountries; track country.code) {
-                      <option [value]="country.code">{{ country.flag }} {{ country.name }} (+{{ country.dialCode }})</option>
+                  <div class="country-picker">
+                    <button class="country-trigger" type="button" aria-label="Choose country calling code" [attr.aria-expanded]="countryPickerOpen()" (click)="toggleCountryPicker()">
+                      <img [src]="flagUrl(phoneCountry())" alt="" />
+                      <span>+{{ selectedPhoneCountry()?.dialCode }}</span>
+                      <app-icon name="chevron-down" [size]="14" />
+                    </button>
+                    @if (countryPickerOpen()) {
+                      <div class="country-menu">
+                        <input class="country-search" type="search" placeholder="Search country or code" aria-label="Search countries"
+                          [ngModel]="countrySearch()" (ngModelChange)="countrySearch.set($event)" name="loginCountrySearch" />
+                        <div class="country-options">
+                          @for (country of filteredPhoneCountries(); track country.code) {
+                            <button class="country-option" type="button" (click)="choosePhoneCountry(country.code)">
+                              <img [src]="flagUrl(country.code)" [alt]="country.name + ' flag'" />
+                              <span>{{ country.name }}</span><small>+{{ country.dialCode }}</small>
+                            </button>
+                          }
+                        </div>
+                      </div>
                     }
-                  </select>
+                  </div>
                   <input id="login-phone" class="input" type="tel" inputmode="tel" autocomplete="tel" placeholder="Phone number"
                     [ngModel]="phone()" (ngModelChange)="phone.set($event)" name="loginPhone" />
                 </div>
